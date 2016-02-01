@@ -17,7 +17,7 @@ class Property {
   constructor(config, value) {
     this.config = Property.getConfig(config);
     try {
-      this.setValue(value || this.config.default);
+      this.setValue(defined(value) || this.config.default);
     } catch(e) {}
   }
   attach(parent, key) {
