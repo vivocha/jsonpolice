@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.create = create;
 exports.safeCreate = safeCreate;
 exports.register = register;
+exports.config = config;
 exports.meta = meta;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -468,6 +469,9 @@ function safeCreate(typeOrConfig, value, parent, key) {
 }
 function register(type, config) {
   return Property.registerType(type, config);
+}
+function config(type) {
+  return Property.getConfig(type);
 }
 function meta(obj, key) {
   if (defined(obj) && obj[__sym]) {
