@@ -311,6 +311,9 @@ export function safeCreate(typeOrConfig, value, parent, key) {
 export function register(type, config) {
   return Property.registerType(type, config);
 }
+export function config(type) {
+  return Property.getConfig(type);
+}
 export function meta(obj, key) {
   if (defined(obj) && obj[__sym]) {
     return obj[__sym].meta(key);
