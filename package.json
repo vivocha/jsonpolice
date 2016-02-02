@@ -1,6 +1,6 @@
 {
   "name": "jsonpolice",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Javascript constraints enforcer",
   "main": "index.js",
   "scripts": {
