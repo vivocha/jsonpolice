@@ -1,12 +1,11 @@
 module.exports = {
-  context: __dirname + '/lib',
+  context: __dirname + '/src',
   entry: {
-    jsonpolice: './index.js',
+    test: './test.js',
   },
   output: {
     path: __dirname,
-    filename: './index.js',
-    libraryTarget: 'commonjs2'
+    filename: './[name].js',
   },
   module: {
     loaders: [
