@@ -1,5 +1,7 @@
 'use strict';
 
+import { deepExtend as extend } from 'eredita';
+
 var __sym = Symbol();
 
 function defined(v) {
@@ -308,8 +310,8 @@ export function safeCreate(typeOrConfig, value, parent, key) {
     return value;
   }
 }
-export function register(type, config) {
-  return Property.registerType(type, config);
+export function register(type, config, parent) {
+  return Property.registerType(type, parent ? extend(Property.getConfig(parent), config) : config);
 }
 export function config(type) {
   return Property.getConfig(type);

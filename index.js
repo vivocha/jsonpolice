@@ -15,6 +15,8 @@ exports.register = register;
 exports.config = config;
 exports.meta = meta;
 
+var _eredita = require('eredita');
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -467,8 +469,8 @@ function safeCreate(typeOrConfig, value, parent, key) {
     return value;
   }
 }
-function register(type, config) {
-  return Property.registerType(type, config);
+function register(type, config, parent) {
+  return Property.registerType(type, parent ? (0, _eredita.deepExtend)(Property.getConfig(parent), config) : config);
 }
 function config(type) {
   return Property.getConfig(type);
