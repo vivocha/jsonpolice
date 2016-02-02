@@ -1,10 +1,10 @@
 {
   "name": "jsonpolice",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Javascript constraints enforcer",
   "main": "index.js",
   "scripts": {
-    "prepublish": "babel --presets es2015 --source-maps --out-file index.js src/index.js "
+    "prepublish": "babel --presets es2015 --source-maps --out-file index.js src/index.js"
   },
   "repository": {
     "type": "git",
