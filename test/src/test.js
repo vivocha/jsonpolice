@@ -1,4 +1,4 @@
-import { create, safeCreate, register, meta } from '../../index'
+import { create, register, meta } from '../../index'
 
 
 register('Security', {
@@ -26,6 +26,7 @@ register('Subscription', {
 });
 register('Account', {
   type: 'object',
+  loose: true,
   value: {
     id: {
       type: 'string',
@@ -36,6 +37,9 @@ register('Account', {
       type: 'number',
       readonly: true,
       default: 6
+    },
+    active: {
+      type: 'boolean'
     },
     language: {
       type: 'select',
@@ -66,46 +70,39 @@ register('Account', {
 });
 
 try {
-  window.o = safeCreate('Account', { limitations: { users: 35 } });
+  window.errors = [];
+  //window.o = create('Account', { limitations: { users: 35 } }, { errors: errors, loose: true });
+  //window.o = create({ type: 'object', readonly: true, loose: true, value: { x: { type: 'number', required: true, min: 5 }, z: { type: 'object' } } }, { x: '15', y: 56, z: '{ "a": 10 }' }, { errors: errors });
+
+  window.o = create({
+    type: 'object',
+    value: {
+      x: {
+        type: 'number',
+        min: 5,
+        max: 10
+      },
+      y: {
+        type: 'number',
+        min: 5,
+        max: 15
+      },
+      z: {
+        type: 'array',
+        value: {
+          type: 'string',
+          minLength: 5
+        },
+        default: [ "aaaaa", "bbbbb" ]
+      }
+    }
+  }, {
+    x: 10,
+    y: 11
+  });
+
+
   window.meta = meta;
 } catch(e) {
-  console.log(e.toString());
+  console.error(e.message, e.path);
 }
-
-/*
-{
-  name:
-  type: "string|number|boolean|date|select|array|object"
-  required:
-  readonly:
-  hidden:
-  default:
-  validator:
-
-  // string
-  minLength
-  maxLength
-  pattern
-
-  // number
-  min
-  max
-
-  // array
-  minLength
-  maxLength
-  value
-
-  //select
-  value: [ 'opt1', 'opt2', 'opt3' ]
-
-  // object
-  value: object (each key corresponds)
-}
-
-
-
-{
-  id: 'schema_id'
-}
-  */

@@ -10,7 +10,6 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.create = create;
-exports.safeCreate = safeCreate;
 exports.register = register;
 exports.config = config;
 exports.meta = meta;
@@ -63,14 +62,21 @@ var InitError = function (_Error2) {
 }(Error);
 
 var Property = function () {
-  function Property(config, value, parent, key, errors) {
+  function Property(config, value, _opts) {
     _classCallCheck(this, Property);
 
+    var opts = _opts || {};
+    this.errors = opts.errors;
     this.config = Property.getConfig(config);
-    if (defined(parent) && defined(key)) {
-      this.attach(parent, key);
+    this.loose = config.loose;
+    if (defined(opts.parent) && defined(opts.key)) {
+      this.attach(opts.parent, opts.key);
+      if (!defined(this.loose)) {
+        this.loose = (meta(this.parent) || {}).loose;
+      }
     }
-    this.setValue(defined(value) ? value : this.config.default, errors);
+    this.setValue(defined(value) ? value : this.config.default);
+    delete this.errors;
   }
 
   _createClass(Property, [{
@@ -116,11 +122,12 @@ var Property = function () {
       if (this.config.validator && !this.config.validator(v, this)) {
         this.dataError('validator');
       }
+      return v;
     }
   }, {
     key: 'init',
-    value: function init(v, errors) {
-      this.check(v);
+    value: function init(v) {
+      return this.check(v);
     }
   }, {
     key: 'getter',
@@ -132,29 +139,35 @@ var Property = function () {
   }, {
     key: 'getValue',
     value: function getValue() {
-      this.check(this.value);
-      return this.value;
+      return this.check(this.value);
     }
   }, {
     key: 'setter',
     value: function setter() {
-      var f = this.setValue.bind(this);
-      f.config = this.config;
-      return f;
+      var _this3 = this;
+
+      if (this.parent && ((meta(this.parent) || {}).config || {}).readonly) {
+        return function () {
+          _this3.dataError('readonly');
+        };
+      } else {
+        var f = this.setValue.bind(this);
+        f.config = this.config;
+        return f;
+      }
     }
   }, {
     key: 'setValue',
-    value: function setValue(v, errors) {
+    value: function setValue(v) {
       try {
-        this.init(v, errors);
+        return this.value = this.init(v);
       } catch (e) {
-        if (errors) {
-          errors.push(e);
+        if (this.errors) {
+          this.errors.push(e);
         } else {
           throw e;
         }
       }
-      return this.value = v;
     }
   }, {
     key: 'getPath',
@@ -167,16 +180,6 @@ var Property = function () {
         p += (p ? '.' : '') + this.key;
       }
       return p;
-    }
-  }, {
-    key: 'meta',
-    value: function meta(key) {
-      if (key) {
-        var desc = Object.getOwnPropertyDescriptor(this.value, key);
-        return ((desc || {}).get || {}).config;
-      } else {
-        return this.config;
-      }
     }
   }], [{
     key: 'registerType',
@@ -204,7 +207,7 @@ var Property = function () {
     }
   }, {
     key: 'create',
-    value: function create(typeOrConfig, value, parent, key, errors) {
+    value: function create(typeOrConfig, value, opts) {
       var factories = {
         "string": StringProperty,
         "number": NumberProperty,
@@ -218,7 +221,7 @@ var Property = function () {
       if (!factories[config.type]) {
         throw new Error('bad_type');
       }
-      return new factories[config.type](config, value, parent, key, errors);
+      return new factories[config.type](config, value, opts);
     }
   }]);
 
@@ -228,28 +231,32 @@ var Property = function () {
 var StringProperty = function (_Property) {
   _inherits(StringProperty, _Property);
 
-  function StringProperty(config, value, parent, key, errors) {
+  function StringProperty(config, value, opts) {
     _classCallCheck(this, StringProperty);
 
-    var _this3 = _possibleConstructorReturn(this, Object.getPrototypeOf(StringProperty).call(this, config, value, parent, key, errors));
+    var _this4 = _possibleConstructorReturn(this, Object.getPrototypeOf(StringProperty).call(this, config, value, opts));
 
-    if (defined(_this3.config.pattern)) {
-      if (typeof _this3.config.pattern === 'string') {
-        _this3.config.pattern = new RegExp(_this3.config.pattern);
-      } else if (!(_this3.config.patten instanceof RegExp)) {
+    if (defined(_this4.config.pattern)) {
+      if (typeof _this4.config.pattern === 'string') {
+        _this4.config.pattern = new RegExp(_this4.config.pattern);
+      } else if (!(_this4.config.patten instanceof RegExp)) {
         throw new Error('bad_pattern');
       }
     }
-    return _this3;
+    return _this4;
   }
 
   _createClass(StringProperty, [{
     key: 'check',
     value: function check(v) {
       if (defined(v) && typeof v !== 'string') {
-        this.dataError('type');
+        if (this.loose) {
+          v = v.toString();
+        } else {
+          this.dataError('type');
+        }
       }
-      _get(Object.getPrototypeOf(StringProperty.prototype), 'check', this).call(this, v);
+      v = _get(Object.getPrototypeOf(StringProperty.prototype), 'check', this).call(this, v);
       if (defined(v)) {
         if (defined(this.config.minLength) && v.length < +this.config.minLength) {
           this.dataError('minLength');
@@ -261,6 +268,7 @@ var StringProperty = function (_Property) {
           this.dataError('pattern');
         }
       }
+      return v;
     }
   }]);
 
@@ -270,19 +278,26 @@ var StringProperty = function (_Property) {
 var NumberProperty = function (_Property2) {
   _inherits(NumberProperty, _Property2);
 
-  function NumberProperty(config, value, parent, key, errors) {
+  function NumberProperty(config, value, opts) {
     _classCallCheck(this, NumberProperty);
 
-    return _possibleConstructorReturn(this, Object.getPrototypeOf(NumberProperty).call(this, config, value, parent, key, errors));
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(NumberProperty).call(this, config, value, opts));
   }
 
   _createClass(NumberProperty, [{
     key: 'check',
     value: function check(v) {
       if (defined(v) && typeof v !== 'number') {
-        this.dataError('type');
+        if (this.loose) {
+          v = +v;
+          if (isNaN(v)) {
+            this.dataError('type');
+          }
+        } else {
+          this.dataError('type');
+        }
       }
-      _get(Object.getPrototypeOf(NumberProperty.prototype), 'check', this).call(this, v);
+      v = _get(Object.getPrototypeOf(NumberProperty.prototype), 'check', this).call(this, v);
       if (defined(v)) {
         if (defined(this.config.min) && !(v >= +this.config.min)) {
           this.dataError('min');
@@ -291,6 +306,7 @@ var NumberProperty = function (_Property2) {
           this.dataError('max');
         }
       }
+      return v;
     }
   }]);
 
@@ -300,19 +316,23 @@ var NumberProperty = function (_Property2) {
 var BooleanProperty = function (_Property3) {
   _inherits(BooleanProperty, _Property3);
 
-  function BooleanProperty(config, value, parent, key, errors) {
+  function BooleanProperty(config, value, opts) {
     _classCallCheck(this, BooleanProperty);
 
-    return _possibleConstructorReturn(this, Object.getPrototypeOf(BooleanProperty).call(this, config, value, parent, key, errors));
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(BooleanProperty).call(this, config, value, opts));
   }
 
   _createClass(BooleanProperty, [{
     key: 'check',
     value: function check(v) {
       if (defined(v) && typeof v !== 'boolean') {
-        this.dataError('type');
+        if (this.loose) {
+          v = v != 0 && v !== 'false';
+        } else {
+          this.dataError('type');
+        }
       }
-      _get(Object.getPrototypeOf(BooleanProperty.prototype), 'check', this).call(this, v);
+      return _get(Object.getPrototypeOf(BooleanProperty.prototype), 'check', this).call(this, v);
     }
   }]);
 
@@ -322,25 +342,29 @@ var BooleanProperty = function (_Property3) {
 var ArrayProperty = function (_Property4) {
   _inherits(ArrayProperty, _Property4);
 
-  function ArrayProperty(config, value, parent, key, errors) {
+  function ArrayProperty(config, value, opts) {
     _classCallCheck(this, ArrayProperty);
 
-    var _this6 = _possibleConstructorReturn(this, Object.getPrototypeOf(ArrayProperty).call(this, config, value, parent, key, errors));
+    var _this7 = _possibleConstructorReturn(this, Object.getPrototypeOf(ArrayProperty).call(this, config, value, opts));
 
-    _this6.config.value = Property.getConfig(_this6.config.value);
-    return _this6;
+    _this7.config.value = Property.getConfig(_this7.config.value);
+    return _this7;
   }
 
   _createClass(ArrayProperty, [{
     key: 'init',
-    value: function init(v, errors) {
-      var _this7 = this;
+    value: function init(v) {
+      var _this8 = this;
 
-      this.check(v);
+      v = this.check(v);
       if (!defined(v) || v[__sym] === this) return;
       v[__sym] = this;
       for (var i = 0, p; i < v.length; i++) {
-        p = Property.create(this.config.value, v[i], v, i, errors);
+        p = Property.create(this.config.value, v[i], {
+          parent: v,
+          key: i,
+          errors: this.errors
+        });
       }
       v.push = function () {
         for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -348,9 +372,13 @@ var ArrayProperty = function (_Property4) {
         }
 
         for (var i = 0; i < args.length; i++) {
-          p = Property.create(_this7.config.value, args[i], v, v.length);
+          p = Property.create(_this8.config.value, args[i], {
+            parent: v,
+            key: v.length
+          });
         }
       };
+      return v;
     }
   }, {
     key: 'check',
@@ -358,7 +386,7 @@ var ArrayProperty = function (_Property4) {
       if (defined(v) && (typeof v === 'undefined' ? 'undefined' : _typeof(v)) !== 'object' && !(v instanceof Array)) {
         this.dataError('type');
       }
-      _get(Object.getPrototypeOf(ArrayProperty.prototype), 'check', this).call(this, v);
+      v = _get(Object.getPrototypeOf(ArrayProperty.prototype), 'check', this).call(this, v);
       if (defined(v)) {
         if (defined(this.config.minLength) && v.length < +this.config.minLength) {
           this.dataError('minLength');
@@ -367,6 +395,7 @@ var ArrayProperty = function (_Property4) {
           this.dataError('maxLength');
         }
       }
+      return v;
     }
   }]);
 
@@ -376,10 +405,10 @@ var ArrayProperty = function (_Property4) {
 var DateProperty = function (_Property5) {
   _inherits(DateProperty, _Property5);
 
-  function DateProperty(config, value, parent, key, errors) {
+  function DateProperty(config, value, opts) {
     _classCallCheck(this, DateProperty);
 
-    return _possibleConstructorReturn(this, Object.getPrototypeOf(DateProperty).call(this, config, value, parent, key, errors));
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(DateProperty).call(this, config, value, opts));
   }
 
   _createClass(DateProperty, [{
@@ -387,7 +416,7 @@ var DateProperty = function (_Property5) {
     value: function setValue(v) {
       var _v = v;
       if (defined(_v) && !(_v instanceof Date)) _v = new Date(v);
-      _get(Object.getPrototypeOf(DateProperty.prototype), 'setValue', this).call(this, v);
+      return _get(Object.getPrototypeOf(DateProperty.prototype), 'setValue', this).call(this, _v);
     }
   }]);
 
@@ -397,24 +426,25 @@ var DateProperty = function (_Property5) {
 var SelectProperty = function (_Property6) {
   _inherits(SelectProperty, _Property6);
 
-  function SelectProperty(config, value, parent, key, errors) {
+  function SelectProperty(config, value, opts) {
     _classCallCheck(this, SelectProperty);
 
-    var _this9 = _possibleConstructorReturn(this, Object.getPrototypeOf(SelectProperty).call(this, config, value, parent, key, errors));
+    var _this10 = _possibleConstructorReturn(this, Object.getPrototypeOf(SelectProperty).call(this, config, value, opts));
 
-    if (!(_this9.config.value instanceof Array) || !_this9.config.value.length) {
+    if (!(_this10.config.value instanceof Array) || !_this10.config.value.length) {
       throw new Error('bad_value');
     }
-    return _this9;
+    return _this10;
   }
 
   _createClass(SelectProperty, [{
     key: 'check',
     value: function check(v) {
-      _get(Object.getPrototypeOf(SelectProperty.prototype), 'check', this).call(this, v);
+      v = _get(Object.getPrototypeOf(SelectProperty.prototype), 'check', this).call(this, v);
       if (this.config.value.indexOf(v) === -1) {
         this.dataError('value');
       }
+      return v;
     }
   }]);
 
@@ -424,16 +454,23 @@ var SelectProperty = function (_Property6) {
 var ObjectProperty = function (_Property7) {
   _inherits(ObjectProperty, _Property7);
 
-  function ObjectProperty(config, value, parent, key, errors) {
+  function ObjectProperty(config, value, opts) {
     _classCallCheck(this, ObjectProperty);
 
-    return _possibleConstructorReturn(this, Object.getPrototypeOf(ObjectProperty).call(this, config, value, parent, key, errors));
+    var _this11 = _possibleConstructorReturn(this, Object.getPrototypeOf(ObjectProperty).call(this, config, value, opts));
+
+    if (_this11.config.readonly) {
+      Object.freeze(_this11.value);
+    } else if (_this11.config.seal) {
+      Object.seal(_this11.value);
+    }
+    return _this11;
   }
 
   _createClass(ObjectProperty, [{
     key: 'init',
-    value: function init(v, errors) {
-      this.check(v);
+    value: function init(v) {
+      v = this.check(v);
       if (!defined(v) || v[__sym] === this) return;
       v[__sym] = this;
       var k,
@@ -441,33 +478,44 @@ var ObjectProperty = function (_Property7) {
           sub = this.config.value || {};
       for (k in sub) {
         sub[k] = Property.getConfig(sub[k]);
-        p = Property.create(sub[k], v[k], v, k, errors);
+        p = Property.create(sub[k], v[k], {
+          parent: v,
+          key: k,
+          errors: this.errors
+        });
       }
+      if (this.config.readonly || this.config.seal) {
+        for (k in v) {
+          if (!defined(sub[k])) {
+            delete v[k];
+          }
+        }
+      }
+      return v;
     }
   }, {
     key: 'check',
     value: function check(v) {
       if (defined(v) && (typeof v === 'undefined' ? 'undefined' : _typeof(v)) !== 'object') {
-        this.dataError('type');
+        if (this.loose && typeof v === 'string') {
+          try {
+            v = JSON.parse(v);
+          } catch (e) {
+            this.dataError('parse');
+          }
+        } else {
+          this.dataError('type');
+        }
       }
-      _get(Object.getPrototypeOf(ObjectProperty.prototype), 'check', this).call(this, v);
+      return _get(Object.getPrototypeOf(ObjectProperty.prototype), 'check', this).call(this, v);
     }
   }]);
 
   return ObjectProperty;
 }(Property);
 
-function create(typeOrConfig, value, parent, key) {
-  return Property.create(typeOrConfig, value || {}, parent, key).value;
-}
-function safeCreate(typeOrConfig, value, parent, key) {
-  var errors = [];
-  var value = Property.create(typeOrConfig, value || {}, parent, key, errors).value;
-  if (errors.length) {
-    throw new InitError(value, errors);
-  } else {
-    return value;
-  }
+function create(typeOrConfig, value, opts) {
+  return Property.create(typeOrConfig, value || {}, opts).value;
 }
 function register(type, config, parent) {
   return Property.registerType(type, parent ? (0, _eredita.deepExtend)(Property.getConfig(parent), config) : config);
@@ -475,12 +523,8 @@ function register(type, config, parent) {
 function config(type) {
   return Property.getConfig(type);
 }
-function meta(obj, key) {
-  if (defined(obj) && obj[__sym]) {
-    return obj[__sym].meta(key);
-  } else {
-    return undefined;
-  }
+function meta(obj) {
+  return defined(obj) ? obj[__sym] : undefined;
 }
 
 //# sourceMappingURL=index.js.map
