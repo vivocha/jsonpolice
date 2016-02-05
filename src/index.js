@@ -28,13 +28,20 @@ class InitError extends Error {
 class Property {
   constructor(config, value, _opts) {
     var opts = _opts || {};
-    this.errors = opts.errors;
     this.config = Property.getConfig(config);
-    this.loose = config.loose;
+    if (config.loose) {
+      this.loose = true;
+    }
+    if (opts.errors) {
+      this.errors = opts.errors;
+    }
     if (defined(opts.parent) && defined(opts.key)) {
       this.attach(opts.parent, opts.key);
       if (!defined(this.loose)) {
-        this.loose = (meta(this.parent) || {}).loose;
+        var parent_meta = meta(this.parent);
+        if (parent_meta && parent_meta.loose){
+          this.loose = true;
+        }
       }
     }
     this.setValue(defined(value) ? value : this.config.default);
@@ -82,7 +89,7 @@ class Property {
   }
   getter() {
     var f = this.getValue.bind(this);
-    f.config = this.config;
+    f.meta = this;
     return f;
   }
   getValue() {
@@ -95,7 +102,7 @@ class Property {
       }
     } else {
       var f = this.setValue.bind(this);
-      f.config = this.config;
+      f.meta = this;
       return f;
     }
   }
@@ -119,6 +126,14 @@ class Property {
       p += (p ? '.' : '') + this.key;
     }
     return p;
+  }
+  meta(key) {
+    if (key) {
+      var desc = Object.getOwnPropertyDescriptor(this.value, key);
+      return ((desc || {}).get || {}).meta;
+    } else {
+      return this;
+    }
   }
   static registerType(type, config) {
     if (!Property.types) Property.types = {};
@@ -363,6 +378,10 @@ export function register(type, config, parent) {
 export function config(type) {
   return Property.getConfig(type);
 }
-export function meta(obj) {
-  return defined(obj) ? obj[__sym] : undefined;
+export function meta(obj, key) {
+  if (defined(obj) && obj[__sym]) {
+    return obj[__sym].meta(key);
+  } else {
+    return undefined;
+  }
 }
