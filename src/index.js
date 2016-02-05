@@ -26,12 +26,26 @@ class InitError extends Error {
 }
 
 class Property {
-  constructor(config, value, parent, key, errors) {
+  constructor(config, value, _opts) {
+    var opts = _opts || {};
     this.config = Property.getConfig(config);
-    if (defined(parent) && defined(key)) {
-      this.attach(parent, key);
+    if (config.loose) {
+      this.loose = true;
     }
-    this.setValue(defined(value) ? value : this.config.default, errors);
+    if (opts.errors) {
+      this.errors = opts.errors;
+    }
+    if (defined(opts.parent) && defined(opts.key)) {
+      this.attach(opts.parent, opts.key);
+      if (!defined(this.loose)) {
+        var parent_meta = meta(this.parent);
+        if (parent_meta && parent_meta.loose){
+          this.loose = true;
+        }
+      }
+    }
+    this.setValue(defined(value) ? value : this.config.default);
+    delete this.errors;
   }
   attach(parent, key) {
     this.detach();
@@ -68,35 +82,40 @@ class Property {
     if (this.config.validator && !this.config.validator(v, this)) {
       this.dataError('validator');
     }
+    return v;
   }
-  init(v, errors) {
-    this.check(v);
+  init(v) {
+    return this.check(v);
   }
   getter() {
     var f = this.getValue.bind(this);
-    f.config = this.config;
+    f.meta = this;
     return f;
   }
   getValue() {
-    this.check(this.value);
-    return this.value;
+    return this.check(this.value);
   }
   setter() {
-    var f = this.setValue.bind(this);
-    f.config = this.config;
-    return f;
+    if (this.parent && ((meta(this.parent) || {}).config || {}).readonly) {
+      return () => {
+        this.dataError('readonly');
+      }
+    } else {
+      var f = this.setValue.bind(this);
+      f.meta = this;
+      return f;
+    }
   }
-  setValue(v, errors) {
+  setValue(v) {
     try {
-      this.init(v, errors);
+      return this.value = this.init(v);
     } catch(e) {
-      if (errors) {
-        errors.push(e);
+      if (this.errors) {
+        this.errors.push(e);
       } else {
         throw e;
       }
     }
-    return this.value = v;
   }
   getPath() {
     var p = '';
@@ -111,9 +130,9 @@ class Property {
   meta(key) {
     if (key) {
       var desc = Object.getOwnPropertyDescriptor(this.value, key);
-      return ((desc || {}).get || {}).config;
+      return ((desc || {}).get || {}).meta;
     } else {
-      return this.config;
+      return this;
     }
   }
   static registerType(type, config) {
@@ -136,7 +155,7 @@ class Property {
     }
     return config;
   }
-  static create(typeOrConfig, value, parent, key, errors) {
+  static create(typeOrConfig, value, opts) {
     var factories = {
       "string": StringProperty,
       "number": NumberProperty,
@@ -150,13 +169,13 @@ class Property {
     if (!factories[config.type]) {
       throw new Error('bad_type');
     }
-    return new factories[config.type](config, value, parent, key, errors);
+    return new factories[config.type](config, value, opts);
   }
 }
 
 class StringProperty extends Property {
-  constructor(config, value, parent, key, errors) {
-    super(config, value, parent, key, errors);
+  constructor(config, value, opts) {
+    super(config, value, opts);
     if (defined(this.config.pattern)) {
       if (typeof this.config.pattern === 'string') {
         this.config.pattern = new RegExp(this.config.pattern);
@@ -167,9 +186,13 @@ class StringProperty extends Property {
   }
   check(v) {
     if (defined(v) && typeof v !== 'string') {
-      this.dataError('type');
+      if (this.loose) {
+        v = v.toString();
+      } else {
+        this.dataError('type');
+      }
     }
-    super.check(v);
+    v = super.check(v);
     if (defined(v)) {
       if (defined(this.config.minLength) && v.length < +this.config.minLength) {
         this.dataError('minLength');
@@ -181,18 +204,26 @@ class StringProperty extends Property {
         this.dataError('pattern');
       }
     }
+    return v;
   }
 }
 
 class NumberProperty extends Property {
-  constructor(config, value, parent, key, errors) {
-    super(config, value, parent, key, errors);
+  constructor(config, value, opts) {
+    super(config, value, opts);
   }
   check(v) {
     if (defined(v) && typeof v !== 'number') {
-      this.dataError('type');
+      if (this.loose) {
+        v = +v;
+        if (isNaN(v)) {
+          this.dataError('type');
+        }
+      } else {
+        this.dataError('type');
+      }
     }
-    super.check(v);
+    v = super.check(v);
     if (defined(v)) {
       if (defined(this.config.min) && !(v >= +this.config.min)) {
         this.dataError('min');
@@ -201,44 +232,57 @@ class NumberProperty extends Property {
         this.dataError('max');
       }
     }
+    return v;
   }
 }
 
 class BooleanProperty extends Property {
-  constructor(config, value, parent, key, errors) {
-    super(config, value, parent, key, errors);
+  constructor(config, value, opts) {
+    super(config, value, opts);
   }
   check(v) {
     if (defined(v) && typeof v !== 'boolean') {
-      this.dataError('type');
+      if (this.loose) {
+        v = (v != 0 && v !== 'false');
+      } else {
+        this.dataError('type');
+      }
     }
-    super.check(v);
+    return super.check(v);
   }
 }
 
 class ArrayProperty extends Property {
-  constructor(config, value, parent, key, errors) {
-    super(config, value, parent, key, errors);
+  constructor(config, value, opts) {
+    super(config, value, opts);
     this.config.value = Property.getConfig(this.config.value);
   }
-  init(v, errors) {
-    this.check(v);
+  init(v) {
+    v = this.check(v);
     if (!defined(v) || v[__sym] === this) return;
     v[__sym] = this;
     for (var i = 0, p ; i < v.length ; i++) {
-      p = Property.create(this.config.value, v[i], v, i, errors);
+      p = Property.create(this.config.value, v[i], {
+        parent: v,
+        key: i,
+        errors: this.errors
+      });
     }
     v.push = (...args) => {
       for (var i = 0 ; i < args.length ; i++) {
-        p = Property.create(this.config.value, args[i], v, v.length);
+        p = Property.create(this.config.value, args[i], {
+          parent: v,
+          key: v.length
+        });
       }
     }
+    return v;
   }
   check(v) {
     if (defined(v) && typeof v !== 'object' && !(v instanceof Array)) {
       this.dataError('type');
     }
-    super.check(v);
+    v = super.check(v);
     if (defined(v)) {
       if (defined(this.config.minLength) && v.length < +this.config.minLength) {
         this.dataError('minLength');
@@ -247,68 +291,86 @@ class ArrayProperty extends Property {
         this.dataError('maxLength');
       }
     }
+    return v;
   }
 }
 
 class DateProperty extends Property {
-  constructor(config, value, parent, key, errors) {
-    super(config, value, parent, key, errors);
+  constructor(config, value, opts) {
+    super(config, value, opts);
   }
   setValue(v) {
     var _v = v;
     if (defined(_v) && !(_v instanceof Date)) _v = new Date(v);
-    super.setValue(v);
+    return super.setValue(_v);
   }
 }
 
 class SelectProperty extends Property {
-  constructor(config, value, parent, key, errors) {
-    super(config, value, parent, key, errors);
+  constructor(config, value, opts) {
+    super(config, value, opts);
     if (!(this.config.value instanceof Array) || !this.config.value.length) {
       throw new Error('bad_value');
     }
   }
   check(v) {
-    super.check(v);
+    v = super.check(v);
     if (this.config.value.indexOf(v) === -1) {
       this.dataError('value');
     }
+    return v;
   }
 }
 
 class ObjectProperty extends Property {
-  constructor(config, value, parent, key, errors) {
-    super(config, value, parent, key, errors);
+  constructor(config, value, opts) {
+    super(config, value, opts);
+    if (this.config.readonly) {
+      Object.freeze(this.value);
+    } else if (this.config.seal) {
+      Object.seal(this.value);
+    }
   }
-  init(v, errors) {
-    this.check(v);
+  init(v) {
+    v = this.check(v);
     if (!defined(v) || v[__sym] === this) return;
     v[__sym] = this;
     var k, p, sub = this.config.value || {};
     for (k in sub) {
       sub[k] = Property.getConfig(sub[k]);
-      p = Property.create(sub[k], v[k], v, k, errors);
+      p = Property.create(sub[k], v[k], {
+        parent: v,
+        key: k,
+        errors: this.errors
+      });
     }
+    if (this.config.readonly || this.config.seal) {
+      for (k in v) {
+        if (!defined(sub[k])) {
+          delete v[k];
+        }
+      }
+    }
+    return v;
   }
   check(v) {
     if (defined(v) && typeof v !== 'object') {
-      this.dataError('type');
+      if (this.loose && typeof v === 'string') {
+        try {
+          v = JSON.parse(v);
+        } catch(e) {
+          this.dataError('parse');
+        }
+      } else {
+        this.dataError('type');
+      }
     }
-    super.check(v);
+    return super.check(v);
   }
 }
 
-export function create(typeOrConfig, value, parent, key) {
-  return Property.create(typeOrConfig, value || {}, parent, key).value;
-}
-export function safeCreate(typeOrConfig, value, parent, key) {
-  var errors = [];
-  var value = Property.create(typeOrConfig, value || {}, parent, key, errors).value;
-  if (errors.length) {
-    throw new InitError(value, errors);
-  } else {
-    return value;
-  }
+export function create(typeOrConfig, value, opts) {
+  return Property.create(typeOrConfig, value || {}, opts).value;
 }
 export function register(type, config, parent) {
   return Property.registerType(type, parent ? extend(Property.getConfig(parent), config) : config);
