@@ -79,12 +79,15 @@ class Property {
     if (!defined(v) && this.config.required) {
       this.dataError('required');
     }
-    if (this.config.validator && !this.config.validator(v, this)) {
+    if (defined(v) && typeof this.config.validator === 'function' && !this.config.validator(v, this)) {
       this.dataError('validator');
     }
     return v;
   }
   init(v) {
+    if (defined(v) && typeof this.config.transform === 'function') {
+      v = this.config.transform(v, this);
+    }
     return this.check(v);
   }
   getter() {
@@ -279,8 +282,12 @@ class ArrayProperty extends Property {
     return v;
   }
   check(v) {
-    if (defined(v) && typeof v !== 'object' && !(v instanceof Array)) {
-      this.dataError('type');
+    if (defined(v) && (typeof v !== 'object' || !(v instanceof Array))) {
+      if (this.loose && typeof v === 'string') {
+        v = v.split(',');
+      } else {
+        this.dataError('type');
+      }
     }
     v = super.check(v);
     if (defined(v)) {
@@ -332,7 +339,7 @@ class ObjectProperty extends Property {
     }
   }
   init(v) {
-    v = this.check(v);
+    v = super.init(v);
     if (!defined(v) || v[__sym] === this) return;
     v[__sym] = this;
     var k, p, sub = this.config.value || {};
