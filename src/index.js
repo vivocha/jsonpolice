@@ -9,8 +9,8 @@ function defined(v) {
 }
 
 class DataError extends Error {
-  constructor(name, path) {
-    super(name);
+  constructor(message, path) {
+    super(message);
     this.name = 'DataError';
     this.path = path;
   }
@@ -178,14 +178,10 @@ class Property {
 
 class StringProperty extends Property {
   constructor(config, value, opts) {
-    super(config, value, opts);
-    if (defined(this.config.pattern)) {
-      if (typeof this.config.pattern === 'string') {
-        this.config.pattern = new RegExp(this.config.pattern);
-      } else if (!(this.config.patten instanceof RegExp)) {
-        throw new Error('bad_pattern');
-      }
+    if (defined(config) && defined(config.pattern)) {
+      config.pattern = new RegExp(config.pattern);
     }
+    super(config, value, opts);
   }
   check(v) {
     if (defined(v) && typeof v !== 'string') {
@@ -377,7 +373,7 @@ class ObjectProperty extends Property {
 }
 
 export function create(typeOrConfig, value, opts) {
-  return Property.create(typeOrConfig, value || {}, opts).value;
+  return Property.create(typeOrConfig, value, opts).value;
 }
 export function register(type, config, parent) {
   return Property.registerType(type, parent ? extend(Property.getConfig(parent), config) : config);
