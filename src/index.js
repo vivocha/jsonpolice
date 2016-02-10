@@ -99,7 +99,7 @@ class Property {
     return this.check(this.value);
   }
   setter() {
-    if (this.parent && ((meta(this.parent) || {}).config || {}).readonly) {
+    if (this.config.readonly || (this.parent && ((meta(this.parent) || {}).config || {}).readonly)) {
       return () => {
         this.dataError('readonly');
       }
@@ -160,6 +160,7 @@ class Property {
   }
   static create(typeOrConfig, value, opts) {
     var factories = {
+      "mixed": Property,
       "string": StringProperty,
       "number": NumberProperty,
       "boolean": BooleanProperty,
@@ -384,6 +385,47 @@ export function config(type) {
 export function meta(obj, key) {
   if (defined(obj) && obj[__sym]) {
     return obj[__sym].meta(key);
+  } else {
+    return undefined;
+  }
+}
+export function createConfig(...samples) {
+  var sample;
+  if (samples.length > 0) {
+    if (typeof samples[0] === 'object' && !(samples[0] instanceof Array)) {
+      sample = extend.apply(extend, samples);
+    } else {
+      sample = samples[0];
+    }
+  }
+  if (sample) {
+    var config = {};
+    switch(typeof sample) {
+      case 'string':
+        config.type = 'string';
+        break;
+      case 'number':
+        config.type = 'number';
+        break;
+      case 'boolean':
+        config.type = 'boolean';
+        break;
+      case 'object':
+        if (sample instanceof Array) {
+          config.type = 'array';
+          if (sample.length > 0) {
+            config.value = createConfig.apply(createConfig, sample);
+          }
+        } else {
+          config.type = 'object';
+          config.value = { };
+          for (var i in sample) {
+            config.value[i] = createConfig(sample[i]);
+          }
+        }
+        break;
+    }
+    return config;
   } else {
     return undefined;
   }
