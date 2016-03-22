@@ -1,10 +1,10 @@
 {
   "name": "jsonpolice",
-  "version": "1.2.3",
-  "description": "Javascript constraints enforcer",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "JSON Schema parser and validator",
+  "main": "lib/index.js",
   "scripts": {
-    "prepublish": "babel --presets es2015 --source-maps --out-file index.js src/index.js"
+    "prepublish": "babel --presets es2015 --source-maps -d lib src"
   },
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
   "author": "Federico Pinna <fpinna@vivocha.com>",
   "license": "MIT",
   "dependencies": {
-    "eredita": "^1.0.0"
+    "jsonref": "^2.0.0",
+    "lodash": "^4.5.1"
   }
 }
