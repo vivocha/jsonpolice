@@ -132,8 +132,8 @@ Additionally, type coercion is applied when possible and needed, as described in
 | --- | --- | --- | --- | --- |
 | string | date-time | string | Date | output = new Date(input) |
 | number | | string | number | output = +input |
-| boolean | date-time | string | boolean | true if "true" or "1", false if "false" or "0" |
-| Array | date-time | string | Array | output = input.split(',') |
+| boolean | | string | boolean | true if "true" or "1", false if "false" or "0" |
+| Array | | string | Array | output = input.split(',') |
 
 For arrays, the library supports coercion from strings using by the default the comma-separated format (csv).
 Similarly to the [OpenAPI specification (Swagger)](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#parameter-object),
