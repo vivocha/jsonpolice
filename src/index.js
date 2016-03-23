@@ -3,6 +3,7 @@ import * as refs from 'jsonref';
 import * as vers from './versions';
 
 var __schema = Symbol();
+var __validating = Symbol();
 var __salmon = Symbol();
 var regexps = {
   'date-time': /^([0-9]+)-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])[Tt]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9]|60)(\.[0-9]+)?(([Zz])|([\+|\-]([01][0-9]|2[0-3]):[0-5][0-9]))$/,
@@ -128,23 +129,40 @@ class Schema {
   }
   validate(data, path) {
     path = path || '';
-    if (enumerableAndDefined(this.data, 'type')) {
-      data = this.validateType(data, path);
+    if (typeof data === 'object') {
+      if (data[__validating]) {
+        return data;
+      } else {
+        data[__validating] = true;
+      }
     }
-    if (enumerableAndDefined(this.data, 'enum')) {
-      data = this.validateEnum(data, path);
+    try {
+      if (enumerableAndDefined(this.data, 'type')) {
+        data = this.validateType(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'enum')) {
+        data = this.validateEnum(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'allOf')) {
+        data = this.validateAllOf(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'anyOf')) {
+        data = this.validateAnyOf(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'oneOf')) {
+        data = this.validateOneOf(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'not')) {
+        data = this.validateNot(data, path);
+      }
+    } catch(e) {
+      if (typeof data === 'object') {
+        delete data[__validating];
+      }
+      throw e;
     }
-    if (enumerableAndDefined(this.data, 'allOf')) {
-      data = this.validateAllOf(data, path);
-    }
-    if (enumerableAndDefined(this.data, 'anyOf')) {
-      data = this.validateAnyOf(data, path);
-    }
-    if (enumerableAndDefined(this.data, 'oneOf')) {
-      data = this.validateOneOf(data, path);
-    }
-    if (enumerableAndDefined(this.data, 'not')) {
-      data = this.validateNot(data, path);
+    if (typeof data === 'object') {
+      delete data[__validating];
     }
     return data;
   }
@@ -518,11 +536,15 @@ class StringSchema extends Schema {
 }
 
 export function create(dataOrUri, store, retriever) {
-  return refs.parse(dataOrUri, store, retriever).then(function (data) {
-    return vers.get(data.$schema).then(function(schemaVersion) {
-      var _schemaVersion = Schema.create(schemaVersion, refs.scope(schemaVersion));
-      _schemaVersion.validate(data);
-      return Schema.create(data, typeof dataOrUri === 'string' ? dataOrUri : '#');
+  return vers.parseKnown().then(function(versions) {
+    if (!store) store = {};
+    _.defaults(store, versions);
+    return refs.parse(dataOrUri, store, retriever).then(function (data) {
+      return vers.get(data.$schema).then(function(schemaVersion) {
+        var _schemaVersion = Schema.create(schemaVersion, refs.scope(schemaVersion));
+        _schemaVersion.validate(data);
+        return Schema.create(data, typeof dataOrUri === 'string' ? dataOrUri : '#');
+      });
     });
   });
 }
