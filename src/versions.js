@@ -179,5 +179,7 @@ export function parseKnown() {
       })
     }
   });
-  return p;
+  return p.then(function() {
+    return parsedVersions;
+  });
 }
