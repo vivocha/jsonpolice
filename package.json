@@ -1,6 +1,6 @@
 {
   "name": "jsonpolice",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "JSON Schema parser and validator",
   "main": "lib/index.js",
   "scripts": {
