@@ -128,14 +128,12 @@ class Schema {
     return def;
   }
   validate(data, path) {
-    path = path || '';
-    if (typeof data === 'object') {
-      if (data[__validating]) {
-        return data;
-      } else {
-        data[__validating] = true;
-      }
+    if (this[__validating]) {
+      return data;
+    } else {
+      this[__validating] = true;
     }
+    path = path || '';
     try {
       if (enumerableAndDefined(this.data, 'type')) {
         data = this.validateType(data, path);
@@ -156,14 +154,10 @@ class Schema {
         data = this.validateNot(data, path);
       }
     } catch(e) {
-      if (typeof data === 'object') {
-        delete data[__validating];
-      }
+      delete this[__validating];
       throw e;
     }
-    if (typeof data === 'object') {
-      delete data[__validating];
-    }
+    delete this[__validating];
     return data;
   }
   validateType(data, path) {
@@ -360,7 +354,7 @@ class NumberSchema extends Schema {
     if (typeof data === 'string') {
       data = +data;
     }
-    if (typeof data !== 'number' || data === NaN) {
+    if (typeof data !== 'number' || isNaN(data)) {
       throw new ValidationError(path, this.scope, 'type');
     } else if (enumerableAndDefined(this.data, 'multipleOf') && (data % this.data.multipleOf) !== 0) {
       throw new ValidationError(path, this.scope, 'multipleOf');
@@ -432,10 +426,12 @@ class ObjectSchema extends Schema {
   }
   default(data) {
     var def = super.default(data);
-    if (enumerableAndDefined(this.data, 'properties')) {
-      for (var k in this.data.properties) {
-        if (!defined(def[k])) {
-          _createDefaultProperty(this.data.properties[k][__schema], def, k);
+    if (defined(def)) {
+      if (enumerableAndDefined(this.data, 'properties')) {
+        for (var k in this.data.properties) {
+          if (!defined(def[k])) {
+            _createDefaultProperty(this.data.properties[k][__schema], def, k);
+          }
         }
       }
     }
@@ -536,17 +532,21 @@ class StringSchema extends Schema {
 }
 
 export function create(dataOrUri, store, retriever) {
-  return vers.parseKnown().then(function(versions) {
-    if (!store) store = {};
-    _.defaults(store, versions);
-    return refs.parse(dataOrUri, store, retriever).then(function (data) {
-      return vers.get(data.$schema).then(function(schemaVersion) {
-        var _schemaVersion = Schema.create(schemaVersion, refs.scope(schemaVersion));
-        _schemaVersion.validate(data);
-        return Schema.create(data, typeof dataOrUri === 'string' ? dataOrUri : '#');
+  if (typeof dataOrUri === 'object' && dataOrUri[__schema] instanceof Schema) {
+    return Promise.resolve(dataOrUri[__schema]);
+  } else {
+    return vers.parseKnown().then(function(versions) {
+      if (!store) store = {};
+      _.defaults(store, versions);
+      return refs.parse(dataOrUri, store, retriever).then(function (data) {
+        return vers.get(data.$schema).then(function(schemaVersion) {
+          var _schemaVersion = Schema.create(schemaVersion, refs.scope(schemaVersion));
+          _schemaVersion.validate(data);
+          return Schema.create(data, typeof dataOrUri === 'string' ? dataOrUri : '#');
+        });
       });
     });
-  });
+  }
 }
 export function addVersion(dataOrUri, retriever) {
   return vers.parseKnown().then(function() {
