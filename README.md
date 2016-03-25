@@ -30,7 +30,9 @@ the same `id` and `$ref` values.
 * `retriever` (optional), a function accepting a URL in input and returning a promise resolved to an object
 representing the data downloaded for the URI. Whenever a `$ref` to a new URI is found, if the URI is not
 already cached in the store in use, it'll be fetched using this `retriever`. If not `retriever` is passed
-and a URI needs to be downloaded, a `no_retriever` exception is thrown.
+and a URI needs to be downloaded, a `no_retriever` exception is thrown. Refer to the documentation of
+[jsonref](https://github.com/vivocha/jsonref) for sample retriever functions to use with the browser or
+with Node.js.
 
 The function returns a Promise resolving to a new instance of Schema. Once created, a schema instance can be used
 repeatedly to validate data, calling the method `Schema.validate`.
