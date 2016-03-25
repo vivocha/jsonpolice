@@ -553,3 +553,6 @@ export function addVersion(dataOrUri, retriever) {
     return vers.add(dataOrUri, retriever);
   });
 }
+export function fireValidationError(dataScope, schemaScope, type, info) {
+  throw new ValidationError(dataScope, schemaScope, type, info);
+}
