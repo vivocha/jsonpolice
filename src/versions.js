@@ -157,17 +157,27 @@ var parsedVersions = {
 };
 var defaultVersion = 'http://json-schema.org/draft-04/schema#';
 
-export function add(dataOrUri, retriever) {
-  return refs.parse(dataOrUri, parsedVersions, retriever);
+export function add(dataOrUri, opts) {
+  var _opts = opts || {};
+  return refs.parse(dataOrUri, {
+    scope: _opts.scope,
+    store: parsedVersions,
+    retriever: _opts.retriever
+  });
 }
-export function get(dataOrUri, retriever) {
+export function get(dataOrUri, opts) {
   var ver = dataOrUri || defaultVersion;
+  var _opts = opts || {};
   if (typeof ver === 'string' && parsedVersions[ver]) {
     return Promise.resolve(parsedVersions[ver]);
   } else if (typeof ver === 'string' && knownVersions[ver]) {
-    return refs.parse(knownVersions[ver], parsedVersions, retriever);
+    return refs.parse(knownVersions[ver], {
+      scope: _opts.scope,
+      store: parsedVersions,
+      retriever: _opts.retriever
+    });
   } else {
-    return addVersion(dataOrUri, retriever);
+    return addVersion(dataOrUri, opts);
   }
 }
 export function parseKnown() {
@@ -175,7 +185,10 @@ export function parseKnown() {
   _.each(knownVersions, function(data, uri) {
     if (!parsedVersions[uri]) {
       p = p.then(function() {
-        refs.parse(data, parsedVersions);
+        refs.parse(data, {
+          scope: uri,
+          store: parsedVersions
+        });
       })
     }
   });

@@ -531,26 +531,27 @@ class StringSchema extends Schema {
   }
 }
 
-export function create(dataOrUri, store, retriever) {
+export function create(dataOrUri, opts) {
   if (typeof dataOrUri === 'object' && dataOrUri[__schema] instanceof Schema) {
     return Promise.resolve(dataOrUri[__schema]);
   } else {
     return vers.parseKnown().then(function(versions) {
-      if (!store) store = {};
-      _.defaults(store, versions);
-      return refs.parse(dataOrUri, store, retriever).then(function (data) {
-        return vers.get(data.$schema).then(function(schemaVersion) {
+      var _opts = opts || {};
+      if (!_opts.store) _opts.store = {};
+      _.defaults(_opts.store, versions);
+      return refs.parse(dataOrUri, _opts).then(function(data) {
+        return vers.get(data.$schema, opts).then(function(schemaVersion) {
           var _schemaVersion = Schema.create(schemaVersion, refs.scope(schemaVersion));
           _schemaVersion.validate(data);
-          return Schema.create(data, typeof dataOrUri === 'string' ? dataOrUri : '#');
+          return Schema.create(data, _opts.scope || (typeof dataOrUri === 'string' ? dataOrUri : '#'));
         });
       });
     });
   }
 }
-export function addVersion(dataOrUri, retriever) {
+export function addVersion(dataOrUri, opts) {
   return vers.parseKnown().then(function() {
-    return vers.add(dataOrUri, retriever);
+    return vers.add(dataOrUri, opts);
   });
 }
 export function fireValidationError(dataScope, schemaScope, type, info) {
