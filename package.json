@@ -1,6 +1,6 @@
 {
   "name": "jsonpolice",
-  "version": "2.0.3",
+  "version": "3.0.0",
   "description": "JSON Schema parser and validator",
   "main": "lib/index.js",
   "scripts": {
@@ -24,7 +24,7 @@
   "author": "Federico Pinna <fpinna@vivocha.com>",
   "license": "MIT",
   "dependencies": {
-    "jsonref": "^2.0.1",
+    "jsonref": "^3.0.0",
     "lodash": "^4.5.1"
   }
 }
