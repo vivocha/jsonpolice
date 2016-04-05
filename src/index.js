@@ -134,28 +134,31 @@ class Schema {
       this[__validating] = true;
     }
     path = path || '';
-    try {
-      if (enumerableAndDefined(this.data, 'type')) {
-        data = this.validateType(data, path);
+    data = this.default(data);
+    if (typeof data !== 'undefined') {
+      try {
+        if (enumerableAndDefined(this.data, 'type')) {
+          data = this.validateType(data, path);
+        }
+        if (enumerableAndDefined(this.data, 'enum')) {
+          data = this.validateEnum(data, path);
+        }
+        if (enumerableAndDefined(this.data, 'allOf')) {
+          data = this.validateAllOf(data, path);
+        }
+        if (enumerableAndDefined(this.data, 'anyOf')) {
+          data = this.validateAnyOf(data, path);
+        }
+        if (enumerableAndDefined(this.data, 'oneOf')) {
+          data = this.validateOneOf(data, path);
+        }
+        if (enumerableAndDefined(this.data, 'not')) {
+          data = this.validateNot(data, path);
+        }
+      } catch(e) {
+        delete this[__validating];
+        throw e;
       }
-      if (enumerableAndDefined(this.data, 'enum')) {
-        data = this.validateEnum(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'allOf')) {
-        data = this.validateAllOf(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'anyOf')) {
-        data = this.validateAnyOf(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'oneOf')) {
-        data = this.validateOneOf(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'not')) {
-        data = this.validateNot(data, path);
-      }
-    } catch(e) {
-      delete this[__validating];
-      throw e;
     }
     delete this[__validating];
     return data;
@@ -438,7 +441,6 @@ class ObjectSchema extends Schema {
     return def;
   }
   validateType(data, path) {
-    data = this.default(data);
     var props = Object.keys(data);
     if (typeof data !== 'object' || Array.isArray(data)) {
       throw new ValidationError(path, this.scope, 'type');
