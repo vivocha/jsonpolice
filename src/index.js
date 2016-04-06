@@ -361,9 +361,9 @@ class NumberSchema extends Schema {
       throw new ValidationError(path, this.scope, 'type');
     } else if (enumerableAndDefined(this.data, 'multipleOf') && (data % this.data.multipleOf) !== 0) {
       throw new ValidationError(path, this.scope, 'multipleOf');
-    } else if (enumerableAndDefined(this.data, 'maximum') && (data > this.data.maximum || (this.data.exclusiveMaximum !== false && data === this.data.maximum))) {
+    } else if (enumerableAndDefined(this.data, 'maximum') && (data > this.data.maximum || (this.data.exclusiveMaximum === true && data === this.data.maximum))) {
       throw new ValidationError(path, this.scope, 'maximum');
-    } else if (enumerableAndDefined(this.data, 'minimum') && (data < this.data.minimum || (this.data.exclusiveMinimum !== false && data === this.data.minimum))) {
+    } else if (enumerableAndDefined(this.data, 'minimum') && (data < this.data.minimum || (this.data.exclusiveMinimum === true && data === this.data.minimum))) {
       throw new ValidationError(path, this.scope, 'minimum');
     }
     return data;
