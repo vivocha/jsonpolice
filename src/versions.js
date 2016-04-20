@@ -185,7 +185,7 @@ export function parseKnown() {
   _.each(knownVersions, function(data, uri) {
     if (!parsedVersions[uri]) {
       p = p.then(function() {
-        refs.parse(data, {
+        return refs.parse(data, {
           scope: uri,
           store: parsedVersions
         });
