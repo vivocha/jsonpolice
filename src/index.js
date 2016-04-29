@@ -33,6 +33,63 @@ function testRegExp(exp, value) {
   }
   return r.test(value);
 }
+function linkProperty(o, i, k) {
+  Object.defineProperty(o, k, {
+    get: () => {
+      return i[k];
+    },
+    set: (v) => { },
+    configurable: false,
+    enumerable: true
+  });
+}
+function pushProperty(o, i, k) {
+  Object.defineProperty(o, o.length, {
+    get: () => {
+      return i[k];
+    },
+    set: (v) => { },
+    configurable: false,
+    enumerable: true
+  });
+}
+function mergeProperties(o, i, k) {
+  if (o[i].allOf) {
+    pushProperty(o[i].allOf, i, k);
+  } else {
+    var a = [];
+    pushProperty(a, o, k);
+    pushProperty(a, i, k);
+    o[i] = { allOf: a };
+  }
+}
+function mergeObjects(o, i, k) {
+  if (!enumerableAndDefined(o, k)) {
+    o[k] = {};
+  }
+  for (var j in i[k]) {
+    if (enumerableAndDefined(o[k], j)) {
+      mergeProperties(o[k], i[k], j);
+    } else {
+      linkProperty(o[k], i[k], j);
+    }
+  }
+}
+function assignIfEnumerableAndDefined(o, i, k) {
+  if (enumerableAndDefined(i, k)) o[k] = i[k];
+}
+function assignIfEnumerableAndDefinedAndNotSet(o, i, k) {
+  if (enumerableAndDefined(i, k) && !enumerableAndDefined(o[k])) o[k] = i[k];
+}
+function assignIfEnumerableAndDefinedAndLessThan(o, i, k) {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] < o[k])) o[k] = i[k];
+}
+function assignIfEnumerableAndDefinedAndGreaterThan(o, i, k) {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] > o[k])) o[k] = i[k];
+}
+function assignIfEnumerableAndDefinedAndNot(o, i, k, v) {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] !== v)) o[k] = i[k];
+}
 
 class SchemaError extends Error {
   constructor(schemaScope, type, info) {
@@ -265,6 +322,102 @@ class Schema {
       }
     } else {
       throw new SchemaError(scope, 'no_data');
+    }
+  }
+  static flatten(data) {
+    if (!enumerableAndDefined(data, 'allOf')) {
+      return data;
+    } else {
+      var out = {};
+      // Init the data that must be taken from the outer schema
+      if (enumerableAndDefined(data, 'id')) out.id = data.id;
+      if (enumerableAndDefined(data, '$schema')) out.$schema = data.$schema;
+
+      return _.reduce(data.allOf.concat(data), function(o, i, k) {
+        if (i !== data) {
+          i = Schema.flatten(i);
+        }
+        assignIfEnumerableAndDefined(o, i, 'title');
+        assignIfEnumerableAndDefined(o, i, 'description');
+        assignIfEnumerableAndDefinedAndNotSet(o, i, 'default');
+        assignIfEnumerableAndDefined(o, i, 'multipleOf');
+        assignIfEnumerableAndDefinedAndLessThan(o, i, 'maximum');
+        assignIfEnumerableAndDefinedAndNot(o, i, 'exclusiveMaximum', true);
+        assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minimum');
+        assignIfEnumerableAndDefinedAndNot(o, i, 'exclusiveMinimum', true);
+        assignIfEnumerableAndDefinedAndLessThan(o, i, 'maxLength');
+        assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minLength');
+        assignIfEnumerableAndDefined(o, i, 'pattern');
+        if (enumerableAndDefined(i, 'additionalItems')) {
+          if (enumerableAndDefined(o, 'additionalItems')) {
+            if (typeof i.additionalItems === 'object') {
+              if (typeof o.additionalItems === 'object') {
+                mergeProperties(o, i, 'additionalItems');
+              } else if (o.additionalItems !== false) {
+                linkProperty(o, i, 'additionalItems');
+              }
+            } else if (i.additionalItems === false) {
+              o.additionalItems = false;
+            }
+          } else {
+            linkProperty(o, i, 'additionalItems');
+          }
+        }
+        if (enumerableAndDefined(i, 'items')) {
+          mergeProperties(o, i, 'items');
+        }
+        assignIfEnumerableAndDefinedAndLessThan(o, i, 'maxItems');
+        assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minItems');
+        assignIfEnumerableAndDefinedAndNot(o, i, 'uniqueItems', true);
+        assignIfEnumerableAndDefinedAndLessThan(o, i, 'maxProperties');
+        assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minProperties');
+        if (enumerableAndDefined(i, 'required')) {
+          o.required = _.uniq((o.required || []).concat(i.required));
+        }
+        if (enumerableAndDefined(i, 'additionalProperties')) {
+          if (enumerableAndDefined(o, 'additionalProperties')) {
+            if (typeof i.additionalProperties === 'object') {
+              if (typeof o.additionalProperties === 'object') {
+                mergeProperties(o, i, 'additionalProperties');
+              } else if (o.additionalProperties !== false) {
+                linkProperty(o, i, 'additionalProperties');
+              }
+            } else if (i.additionalProperties === false) {
+              o.additionalProperties = false;
+            }
+          } else {
+            linkProperty(o, i, 'additionalProperties');
+          }
+        }
+        if (enumerableAndDefined(i, 'definitions')) {
+          mergeObjects(o, i , 'definitions');
+        }
+        if (enumerableAndDefined(i, 'properties')) {
+          mergeObjects(o, i , 'properties');
+        }
+        if (enumerableAndDefined(i, 'patternProperties')) {
+          mergeObjects(o, i , 'patternProperties');
+        }
+        if (enumerableAndDefined(i, 'dependencies')) {
+          if (enumerableAndDefined(o, 'dependencies')) {
+            if (Array.isArray(o.dependencies) && Array.isArray(i.dependencies)) {
+              o.dependencies = _.uniq((o.dependencies || []).concat(i.dependencies));
+            } else if (typeof o.dependencies === 'object' && typeof i.dependencies === 'object') {
+              mergeProperties(o, i, 'dependencies');
+            } else {
+              linkProperty(o, i, 'dependencies');
+            }
+          } else {
+            linkProperty(o, i, 'dependencies');
+          }
+        }
+        assignIfEnumerableAndDefinedAndNotSet(o, i, 'enum');
+        assignIfEnumerableAndDefinedAndNotSet(o, i, 'type');
+        assignIfEnumerableAndDefined(o, i, 'anyOf');
+        assignIfEnumerableAndDefined(o, i, 'oneOf');
+        assignIfEnumerableAndDefined(o, i, 'not');
+        return o;
+      }, out);
     }
   }
 }
@@ -550,6 +703,11 @@ export function create(dataOrUri, opts) {
       });
     });
   }
+}
+export function flatten(dataOrUri, opts) {
+  return create(dataOrUri, opts).then(function(schema) {
+    return Schema.flatten(schema.data);
+  });
 }
 export function addVersion(dataOrUri, opts) {
   return vers.parseKnown().then(function() {
