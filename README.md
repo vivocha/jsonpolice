@@ -35,6 +35,9 @@ already cached in the store in use, it'll be fetched using this `retriever`. If 
 and a URI needs to be downloaded, a `no_retriever` exception is thrown. Refer to the documentation of
 [jsonref](https://github.com/vivocha/jsonref) for sample retriever functions to use in the browser or
 with Node.js.
+ * `removeAdditional`, if `true` unknown properties are filtered out. Unknown properties are properties
+not passing the validation of none of `properties`, `patternProperties` and `additionalProperties`) If
+omitted or set to `false`, an unknown property triggers a ValidationError.
 
 The function returns a Promise resolving to a new instance of Schema. Once created, a schema instance can be used
 repeatedly to validate data, calling the method `Schema.validate`.
@@ -82,6 +85,7 @@ function to register custom extensions to the basic JSON Schema specification
 representing the data downloaded for the URI. Whenever a `$ref` to a new URI is found, if the URI is not
 already cached in the store in use, it'll be fetched using this `retriever`. If not `retriever` is passed
 and a URI needs to be downloaded, a `no_retriever` exception is thrown.
+ * `removeAdditional`, see the description of the parameter with the same name in the `create` function above.
 
 The function returns a Promise resolving to the parsed data, with all `$ref` instances resolved.
 

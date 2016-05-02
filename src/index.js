@@ -33,6 +33,63 @@ function testRegExp(exp, value) {
   }
   return r.test(value);
 }
+function linkProperty(o, i, k) {
+  Object.defineProperty(o, k, {
+    get: () => {
+      return i[k];
+    },
+    set: (v) => { },
+    configurable: false,
+    enumerable: true
+  });
+}
+function pushProperty(o, i, k) {
+  Object.defineProperty(o, o.length, {
+    get: () => {
+      return i[k];
+    },
+    set: (v) => { },
+    configurable: false,
+    enumerable: true
+  });
+}
+function mergeProperties(o, i, k) {
+  if (o[i].allOf) {
+    pushProperty(o[i].allOf, i, k);
+  } else {
+    var a = [];
+    pushProperty(a, o, k);
+    pushProperty(a, i, k);
+    o[i] = { allOf: a };
+  }
+}
+function mergeObjects(o, i, k) {
+  if (!enumerableAndDefined(o, k)) {
+    o[k] = {};
+  }
+  for (var j in i[k]) {
+    if (enumerableAndDefined(o[k], j)) {
+      mergeProperties(o[k], i[k], j);
+    } else {
+      linkProperty(o[k], i[k], j);
+    }
+  }
+}
+function assignIfEnumerableAndDefined(o, i, k) {
+  if (enumerableAndDefined(i, k)) o[k] = i[k];
+}
+function assignIfEnumerableAndDefinedAndNotSet(o, i, k) {
+  if (enumerableAndDefined(i, k) && !enumerableAndDefined(o[k])) o[k] = i[k];
+}
+function assignIfEnumerableAndDefinedAndLessThan(o, i, k) {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] < o[k])) o[k] = i[k];
+}
+function assignIfEnumerableAndDefinedAndGreaterThan(o, i, k) {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] > o[k])) o[k] = i[k];
+}
+function assignIfEnumerableAndDefinedAndNot(o, i, k, v) {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] !== v)) o[k] = i[k];
+}
 
 class SchemaError extends Error {
   constructor(schemaScope, type, info) {
@@ -78,9 +135,10 @@ function _createDefaultProperty(schema, obj, key) {
 }
 
 class Schema {
-  constructor(data, scope) {
+  constructor(data, opts) {
     this.data = data;
-    this.scope = refs.scope(data) || data.id || scope || '#';
+    this.opts = opts;
+    this.scope = refs.scope(data) || data.id || opts.scope || '#';
   }
   init() {
     if (enumerableAndDefined(this.data, 'allOf')) {
@@ -213,7 +271,7 @@ class Schema {
     }
     throw new ValidationError(path, this.scope, 'not');
   }
-  static create(data, scope) {
+  static create(data, opts) {
     var schema;
     if (defined(data)) {
       if (data[__schema] instanceof Schema) {
@@ -227,51 +285,147 @@ class Schema {
               _type.type = type;
               _data.anyOf.push(_type);
             });
-            schema = new Schema(_data, scope);
+            schema = new Schema(_data, opts);
           } else {
             switch (data.type) {
               case 'array':
-                schema = new ArraySchema(data, scope);
+                schema = new ArraySchema(data, opts);
                 break;
               case 'boolean':
-                schema = new BooleanSchema(data, scope);
+                schema = new BooleanSchema(data, opts);
                 break;
               case 'integer':
-                schema = new IntegerSchema(data, scope);
+                schema = new IntegerSchema(data, opts);
                 break;
               case 'number':
-                schema = new NumberSchema(data, scope);
+                schema = new NumberSchema(data, opts);
                 break;
               case 'null':
-                schema = new NullSchema(data, scope);
+                schema = new NullSchema(data, opts);
                 break;
               case 'object':
-                schema = new ObjectSchema(data, scope);
+                schema = new ObjectSchema(data, opts);
                 break;
               case 'string':
-                schema = new StringSchema(data, scope);
+                schema = new StringSchema(data, opts);
                 break;
               default:
-                throw new SchemaError(scope, 'type', data.type);
+                throw new SchemaError(opts.scope, 'type', data.type);
                 break;
             }
           }
         } else {
-          schema = new Schema(data, scope);
+          schema = new Schema(data, opts);
         }
         data[__schema] = schema;
         schema.init();
         return schema;
       }
     } else {
-      throw new SchemaError(scope, 'no_data');
+      throw new SchemaError(opts.scope, 'no_data');
+    }
+  }
+  static flatten(data) {
+    if (!enumerableAndDefined(data, 'allOf')) {
+      return data;
+    } else {
+      var out = {};
+      // Init the data that must be taken from the outer schema
+      if (enumerableAndDefined(data, 'id')) out.id = data.id;
+      if (enumerableAndDefined(data, '$schema')) out.$schema = data.$schema;
+
+      return _.reduce(data.allOf.concat(data), function(o, i, k) {
+        if (i !== data) {
+          i = Schema.flatten(i);
+        }
+        assignIfEnumerableAndDefined(o, i, 'title');
+        assignIfEnumerableAndDefined(o, i, 'description');
+        assignIfEnumerableAndDefinedAndNotSet(o, i, 'default');
+        assignIfEnumerableAndDefined(o, i, 'multipleOf');
+        assignIfEnumerableAndDefinedAndLessThan(o, i, 'maximum');
+        assignIfEnumerableAndDefinedAndNot(o, i, 'exclusiveMaximum', true);
+        assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minimum');
+        assignIfEnumerableAndDefinedAndNot(o, i, 'exclusiveMinimum', true);
+        assignIfEnumerableAndDefinedAndLessThan(o, i, 'maxLength');
+        assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minLength');
+        assignIfEnumerableAndDefined(o, i, 'pattern');
+        if (enumerableAndDefined(i, 'additionalItems')) {
+          if (enumerableAndDefined(o, 'additionalItems')) {
+            if (typeof i.additionalItems === 'object') {
+              if (typeof o.additionalItems === 'object') {
+                mergeProperties(o, i, 'additionalItems');
+              } else if (o.additionalItems !== false) {
+                linkProperty(o, i, 'additionalItems');
+              }
+            } else if (i.additionalItems === false) {
+              o.additionalItems = false;
+            }
+          } else {
+            linkProperty(o, i, 'additionalItems');
+          }
+        }
+        if (enumerableAndDefined(i, 'items')) {
+          mergeProperties(o, i, 'items');
+        }
+        assignIfEnumerableAndDefinedAndLessThan(o, i, 'maxItems');
+        assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minItems');
+        assignIfEnumerableAndDefinedAndNot(o, i, 'uniqueItems', true);
+        assignIfEnumerableAndDefinedAndLessThan(o, i, 'maxProperties');
+        assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minProperties');
+        if (enumerableAndDefined(i, 'required')) {
+          o.required = _.uniq((o.required || []).concat(i.required));
+        }
+        if (enumerableAndDefined(i, 'additionalProperties')) {
+          if (enumerableAndDefined(o, 'additionalProperties')) {
+            if (typeof i.additionalProperties === 'object') {
+              if (typeof o.additionalProperties === 'object') {
+                mergeProperties(o, i, 'additionalProperties');
+              } else if (o.additionalProperties !== false) {
+                linkProperty(o, i, 'additionalProperties');
+              }
+            } else if (i.additionalProperties === false) {
+              o.additionalProperties = false;
+            }
+          } else {
+            linkProperty(o, i, 'additionalProperties');
+          }
+        }
+        if (enumerableAndDefined(i, 'definitions')) {
+          mergeObjects(o, i , 'definitions');
+        }
+        if (enumerableAndDefined(i, 'properties')) {
+          mergeObjects(o, i , 'properties');
+        }
+        if (enumerableAndDefined(i, 'patternProperties')) {
+          mergeObjects(o, i , 'patternProperties');
+        }
+        if (enumerableAndDefined(i, 'dependencies')) {
+          if (enumerableAndDefined(o, 'dependencies')) {
+            if (Array.isArray(o.dependencies) && Array.isArray(i.dependencies)) {
+              o.dependencies = _.uniq((o.dependencies || []).concat(i.dependencies));
+            } else if (typeof o.dependencies === 'object' && typeof i.dependencies === 'object') {
+              mergeProperties(o, i, 'dependencies');
+            } else {
+              linkProperty(o, i, 'dependencies');
+            }
+          } else {
+            linkProperty(o, i, 'dependencies');
+          }
+        }
+        assignIfEnumerableAndDefinedAndNotSet(o, i, 'enum');
+        assignIfEnumerableAndDefinedAndNotSet(o, i, 'type');
+        assignIfEnumerableAndDefined(o, i, 'anyOf');
+        assignIfEnumerableAndDefined(o, i, 'oneOf');
+        assignIfEnumerableAndDefined(o, i, 'not');
+        return o;
+      }, out);
     }
   }
 }
 
 class ArraySchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   init() {
     super.init();
@@ -331,8 +485,8 @@ class ArraySchema extends Schema {
 }
 
 class BooleanSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     if (typeof data === 'string') {
@@ -350,8 +504,8 @@ class BooleanSchema extends Schema {
 }
 
 class NumberSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     if (typeof data === 'string') {
@@ -371,8 +525,8 @@ class NumberSchema extends Schema {
 }
 
 class IntegerSchema extends NumberSchema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     data = super.validateType(data, path)
@@ -384,8 +538,8 @@ class IntegerSchema extends NumberSchema {
 }
 
 class NullSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     if (typeof data !== 'null') {
@@ -396,8 +550,8 @@ class NullSchema extends Schema {
 }
 
 class ObjectSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   init() {
     super.init();
@@ -489,7 +643,11 @@ class ObjectSchema extends Schema {
           }
           if (!found) {
             if (this.data.additionalProperties === false) {
-              throw new ValidationError(path + '/' + k, this.scope, 'property');
+              if (this.opts.removeAdditional) {
+                delete data[k];
+              } else {
+                throw new ValidationError(path + '/' + k, this.scope, 'property');
+              }
             } else if (typeof this.data.additionalProperties === 'object') {
               data[k] = this.data.additionalProperties[__schema].validate(data[k], path + '/' + k);
             }
@@ -502,8 +660,8 @@ class ObjectSchema extends Schema {
 }
 
 class StringSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     if (this.data.format === 'date-time') {
@@ -539,17 +697,23 @@ export function create(dataOrUri, opts) {
   } else {
     return vers.parseKnown().then(function(versions) {
       var _opts = opts || {};
+      if (!_opts.scope) _opts.scope = (typeof dataOrUri === 'string' ? dataOrUri : '#');
       if (!_opts.store) _opts.store = {};
       _.defaults(_opts.store, versions);
       return refs.parse(dataOrUri, _opts).then(function(data) {
         return vers.get(data.$schema, opts).then(function(schemaVersion) {
           var _schemaVersion = Schema.create(schemaVersion, refs.scope(schemaVersion));
           _schemaVersion.validate(data);
-          return Schema.create(data, _opts.scope || (typeof dataOrUri === 'string' ? dataOrUri : '#'));
+          return Schema.create(data, _opts);
         });
       });
     });
   }
+}
+export function flatten(dataOrUri, opts) {
+  return create(dataOrUri, opts).then(function(schema) {
+    return Schema.flatten(schema.data);
+  });
 }
 export function addVersion(dataOrUri, opts) {
   return vers.parseKnown().then(function() {
