@@ -135,9 +135,10 @@ function _createDefaultProperty(schema, obj, key) {
 }
 
 class Schema {
-  constructor(data, scope) {
+  constructor(data, opts) {
     this.data = data;
-    this.scope = refs.scope(data) || data.id || scope || '#';
+    this.opts = opts;
+    this.scope = refs.scope(data) || data.id || opts.scope || '#';
   }
   init() {
     if (enumerableAndDefined(this.data, 'allOf')) {
@@ -270,7 +271,7 @@ class Schema {
     }
     throw new ValidationError(path, this.scope, 'not');
   }
-  static create(data, scope) {
+  static create(data, opts) {
     var schema;
     if (defined(data)) {
       if (data[__schema] instanceof Schema) {
@@ -284,44 +285,44 @@ class Schema {
               _type.type = type;
               _data.anyOf.push(_type);
             });
-            schema = new Schema(_data, scope);
+            schema = new Schema(_data, opts);
           } else {
             switch (data.type) {
               case 'array':
-                schema = new ArraySchema(data, scope);
+                schema = new ArraySchema(data, opts);
                 break;
               case 'boolean':
-                schema = new BooleanSchema(data, scope);
+                schema = new BooleanSchema(data, opts);
                 break;
               case 'integer':
-                schema = new IntegerSchema(data, scope);
+                schema = new IntegerSchema(data, opts);
                 break;
               case 'number':
-                schema = new NumberSchema(data, scope);
+                schema = new NumberSchema(data, opts);
                 break;
               case 'null':
-                schema = new NullSchema(data, scope);
+                schema = new NullSchema(data, opts);
                 break;
               case 'object':
-                schema = new ObjectSchema(data, scope);
+                schema = new ObjectSchema(data, opts);
                 break;
               case 'string':
-                schema = new StringSchema(data, scope);
+                schema = new StringSchema(data, opts);
                 break;
               default:
-                throw new SchemaError(scope, 'type', data.type);
+                throw new SchemaError(opts.scope, 'type', data.type);
                 break;
             }
           }
         } else {
-          schema = new Schema(data, scope);
+          schema = new Schema(data, opts);
         }
         data[__schema] = schema;
         schema.init();
         return schema;
       }
     } else {
-      throw new SchemaError(scope, 'no_data');
+      throw new SchemaError(opts.scope, 'no_data');
     }
   }
   static flatten(data) {
@@ -423,8 +424,8 @@ class Schema {
 }
 
 class ArraySchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   init() {
     super.init();
@@ -484,8 +485,8 @@ class ArraySchema extends Schema {
 }
 
 class BooleanSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     if (typeof data === 'string') {
@@ -503,8 +504,8 @@ class BooleanSchema extends Schema {
 }
 
 class NumberSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     if (typeof data === 'string') {
@@ -524,8 +525,8 @@ class NumberSchema extends Schema {
 }
 
 class IntegerSchema extends NumberSchema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     data = super.validateType(data, path)
@@ -537,8 +538,8 @@ class IntegerSchema extends NumberSchema {
 }
 
 class NullSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     if (typeof data !== 'null') {
@@ -549,8 +550,8 @@ class NullSchema extends Schema {
 }
 
 class ObjectSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   init() {
     super.init();
@@ -642,7 +643,11 @@ class ObjectSchema extends Schema {
           }
           if (!found) {
             if (this.data.additionalProperties === false) {
-              throw new ValidationError(path + '/' + k, this.scope, 'property');
+              if (this.opts.removeAdditional) {
+                delete data[k];
+              } else {
+                throw new ValidationError(path + '/' + k, this.scope, 'property');
+              }
             } else if (typeof this.data.additionalProperties === 'object') {
               data[k] = this.data.additionalProperties[__schema].validate(data[k], path + '/' + k);
             }
@@ -655,8 +660,8 @@ class ObjectSchema extends Schema {
 }
 
 class StringSchema extends Schema {
-  constructor(data, scope) {
-    super(data, scope);
+  constructor(data, opts) {
+    super(data, opts);
   }
   validateType(data, path) {
     if (this.data.format === 'date-time') {
@@ -692,13 +697,14 @@ export function create(dataOrUri, opts) {
   } else {
     return vers.parseKnown().then(function(versions) {
       var _opts = opts || {};
+      if (!_opts.scope) _opts.scope = (typeof dataOrUri === 'string' ? dataOrUri : '#');
       if (!_opts.store) _opts.store = {};
       _.defaults(_opts.store, versions);
       return refs.parse(dataOrUri, _opts).then(function(data) {
         return vers.get(data.$schema, opts).then(function(schemaVersion) {
           var _schemaVersion = Schema.create(schemaVersion, refs.scope(schemaVersion));
           _schemaVersion.validate(data);
-          return Schema.create(data, _opts.scope || (typeof dataOrUri === 'string' ? dataOrUri : '#'));
+          return Schema.create(data, _opts);
         });
       });
     });
