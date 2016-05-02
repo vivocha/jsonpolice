@@ -692,6 +692,9 @@ class StringSchema extends Schema {
 }
 
 export function create(dataOrUri, opts) {
+  if (!dataOrUri) {
+    throw new SchemaError(opts.scope, 'no_data');
+  }
   if (typeof dataOrUri === 'object' && dataOrUri[__schema] instanceof Schema) {
     return Promise.resolve(dataOrUri[__schema]);
   } else {
