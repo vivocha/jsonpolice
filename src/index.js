@@ -718,6 +718,9 @@ export function flatten(dataOrUri, opts) {
     return Schema.flatten(schema.data);
   });
 }
+export function getVersion(dataOrUri, opts) {
+  return vers.get(dataOrUri, opts);
+}
 export function addVersion(dataOrUri, opts) {
   return vers.parseKnown().then(function() {
     return vers.add(dataOrUri, opts);
