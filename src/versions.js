@@ -177,7 +177,7 @@ export function get(dataOrUri, opts) {
       retriever: _opts.retriever
     });
   } else {
-    return addVersion(dataOrUri, opts);
+    return add(dataOrUri, opts);
   }
 }
 export function parseKnown() {
