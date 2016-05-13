@@ -649,7 +649,10 @@ class ObjectSchema extends Schema {
                 throw new ValidationError(path + '/' + k, this.scope, 'property');
               }
             } else if (typeof this.data.additionalProperties === 'object') {
-              data[k] = this.data.additionalProperties[__schema].validate(data[k], path + '/' + k);
+              let s = this.data.additionalProperties[__schema];
+              if(s) {
+                data[k] = s.validate(data[k], path + '/' + k);
+              }
             }
           }
         }
