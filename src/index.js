@@ -339,6 +339,7 @@ class Schema {
           i = Schema.flatten(i);
         }
         assignIfEnumerableAndDefined(o, i, 'title');
+        assignIfEnumerableAndDefined(o, i, 'format');
         assignIfEnumerableAndDefined(o, i, 'description');
         assignIfEnumerableAndDefinedAndNotSet(o, i, 'default');
         assignIfEnumerableAndDefined(o, i, 'multipleOf');
