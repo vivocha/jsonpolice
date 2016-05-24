@@ -122,7 +122,8 @@ function _createDefaultProperty(schema, obj, key) {
       Object.defineProperty(obj, key, {
         value: v,
         configurable: true,
-        enumerable: true
+        enumerable: true,
+        writable: true
       });
       if (obj[__salmon]) {
         obj[__salmon].obj[obj[__salmon].key] = obj;
