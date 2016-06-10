@@ -695,7 +695,7 @@ class StringSchema extends Schema {
   }
 }
 
-export function create(dataOrUri, opts) {
+export function create(dataOrUri, opts = {}) {
   if (!dataOrUri) {
     throw new SchemaError(opts.scope, 'no_data');
   }
