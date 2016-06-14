@@ -340,6 +340,7 @@ class Schema {
           i = Schema.flatten(i);
         }
         assignIfEnumerableAndDefined(o, i, 'title');
+        assignIfEnumerableAndDefined(o, i, 'format');
         assignIfEnumerableAndDefined(o, i, 'description');
         assignIfEnumerableAndDefinedAndNotSet(o, i, 'default');
         assignIfEnumerableAndDefined(o, i, 'multipleOf');
@@ -695,7 +696,7 @@ class StringSchema extends Schema {
   }
 }
 
-export function create(dataOrUri, opts) {
+export function create(dataOrUri, opts = {}) {
   if (!dataOrUri) {
     throw new SchemaError(opts.scope, 'no_data');
   }
