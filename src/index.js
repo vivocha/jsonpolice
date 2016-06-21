@@ -54,13 +54,13 @@ function pushProperty(o, i, k) {
   });
 }
 function mergeProperties(o, i, k) {
-  if (o[i].allOf) {
-    pushProperty(o[i].allOf, i, k);
+  if (o[k].allOf) {
+    pushProperty(o[k].allOf, i, k);
   } else {
     var a = [];
     pushProperty(a, o, k);
     pushProperty(a, i, k);
-    o[i] = { allOf: a };
+    o[k] = { allOf: a };
   }
 }
 function mergeObjects(o, i, k) {
@@ -367,7 +367,11 @@ class Schema {
           }
         }
         if (enumerableAndDefined(i, 'items')) {
-          mergeProperties(o, i, 'items');
+          if (enumerableAndDefined(o, 'items')) {
+            mergeProperties(o, i, 'items');
+          } else {
+            linkProperty(o, i, 'items');
+          }
         }
         assignIfEnumerableAndDefinedAndLessThan(o, i, 'maxItems');
         assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minItems');
