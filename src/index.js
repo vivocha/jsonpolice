@@ -54,13 +54,13 @@ function pushProperty(o, i, k) {
   });
 }
 function mergeProperties(o, i, k) {
-  if (o[i].allOf) {
-    pushProperty(o[i].allOf, i, k);
+  if (o[k].allOf) {
+    pushProperty(o[k].allOf, i, k);
   } else {
     var a = [];
     pushProperty(a, o, k);
     pushProperty(a, i, k);
-    o[i] = { allOf: a };
+    o[k] = { allOf: a };
   }
 }
 function mergeObjects(o, i, k) {
@@ -122,7 +122,8 @@ function _createDefaultProperty(schema, obj, key) {
       Object.defineProperty(obj, key, {
         value: v,
         configurable: true,
-        enumerable: true
+        enumerable: true,
+        writable: true
       });
       if (obj[__salmon]) {
         obj[__salmon].obj[obj[__salmon].key] = obj;
@@ -143,21 +144,21 @@ class Schema {
   init() {
     if (enumerableAndDefined(this.data, 'allOf')) {
       _.each(this.data.allOf, (data, i) => {
-        Schema.create(this.data.allOf[i], this.scope + '/allOf/' + i);
+        Schema.create(this.data.allOf[i], _.defaults(this.opts, { scope: this.scope + '/allOf/' + i }));
       });
     }
     if (enumerableAndDefined(this.data, 'anyOf')) {
       _.each(this.data.anyOf, (data, i) => {
-        Schema.create(this.data.anyOf[i], this.scope + '/anyOf/' + i);
+        Schema.create(this.data.anyOf[i], _.defaults(this.opts, { scope: this.scope + '/anyOf/' + i }));
       });
     }
     if (enumerableAndDefined(this.data, 'oneOf')) {
       _.each(this.data.oneOf, (data, i) => {
-        Schema.create(this.data.oneOf[i], this.scope + '/oneOf/' + i);
+        Schema.create(this.data.oneOf[i], _.defaults(this.opts, { scope: this.scope + '/oneOf/' + i }));
       });
     }
     if (enumerableAndDefined(this.data, 'not')) {
-      Schema.create(this.data.not, this.scope + '/not');
+      Schema.create(this.data.not, _.defaults(this.opts, { scope: this.scope + '/not' }));
     }
   }
   default(data) {
@@ -366,7 +367,11 @@ class Schema {
           }
         }
         if (enumerableAndDefined(i, 'items')) {
-          mergeProperties(o, i, 'items');
+          if (enumerableAndDefined(o, 'items')) {
+            mergeProperties(o, i, 'items');
+          } else {
+            linkProperty(o, i, 'items');
+          }
         }
         assignIfEnumerableAndDefinedAndLessThan(o, i, 'maxItems');
         assignIfEnumerableAndDefinedAndGreaterThan(o, i, 'minItems');
@@ -433,17 +438,17 @@ class ArraySchema extends Schema {
     if (enumerableAndDefined(this.data, 'items')) {
       if (Array.isArray(this.data.items)) {
         _.each(this.data.items, (data, i) => {
-          Schema.create(this.data.items[i], this.scope + '/items/' + i);
+          Schema.create(this.data.items[i], _.defaults(this.opts, { scope: this.scope + '/items/' + i }));
         });
       } else if (typeof this.data.items === 'object') {
-        Schema.create(this.data.items, this.scope + '/items');
+        Schema.create(this.data.items, _.defaults(this.opts, { scope: this.scope + '/items' }));
       } else {
         throw new SchemaError(this.scope, 'items', data.items);
       }
     }
     if (enumerableAndDefined(this.data, 'additionalItems')) {
       if (typeof this.data.additionalItems === 'object') {
-        Schema.create(this.data.additionalItems, this.scope + '/additionalItems');
+        Schema.create(this.data.additionalItems, _.defaults(this.opts, { scope: this.scope + '/additionalItems' }));
       } else if (typeof this.data.additionalItems !== 'boolean') {
         throw new SchemaError(this.scope, 'additionalItems', data.additionalItems);
       }
@@ -559,17 +564,17 @@ class ObjectSchema extends Schema {
     var i;
     if (enumerableAndDefined(this.data, 'properties')) {
       for (i in this.data.properties) {
-        Schema.create(this.data.properties[i], this.scope + '/properties/' + i);
+        Schema.create(this.data.properties[i], _.defaults(this.opts, { scope: this.scope + '/properties/' + i }));
       }
     }
     if (enumerableAndDefined(this.data, 'patternProperties')) {
       for (i in this.data.patternProperties) {
-        Schema.create(this.data.patternProperties[i], this.scope + '/patternProperties/' + i);
+        Schema.create(this.data.patternProperties[i], _.defaults(this.opts, { scope: this.scope + '/patternProperties/' + i }));
       }
     }
     if (enumerableAndDefined(this.data, 'additionalProperties')) {
       if (typeof this.data.additionalProperties === 'object') {
-        Schema.create(this.data.additionalProperties, this.scope + '/additionalProperties');
+        Schema.create(this.data.additionalProperties, _.defaults(this.opts, { scope: this.scope + '/additionalProperties' }));
       } else if (typeof this.data.additionalProperties !== 'boolean') {
         throw new SchemaError(this.scope, 'additionalProperties', data.additionalProperties);
       }
@@ -577,7 +582,7 @@ class ObjectSchema extends Schema {
     if (enumerableAndDefined(this.data, 'dependencies')) {
       for (i in this.data.dependencies) {
         if (typeof this.data.dependencies[i] === 'object' && !Array.isArray(this.data.dependencies[i])) {
-          Schema.create(this.data.dependencies[i], this.scope + '/dependencies/' + i);
+          Schema.create(this.data.dependencies[i], _.defaults(this.opts, { scope: this.scope + '/dependencies/' + i }));
         }
       }
     }
@@ -709,7 +714,7 @@ export function create(dataOrUri, opts = {}) {
       _.defaults(_opts.store, versions);
       return refs.parse(dataOrUri, _opts).then(function(data) {
         return vers.get(data.$schema, opts).then(function(schemaVersion) {
-          var _schemaVersion = Schema.create(schemaVersion, refs.scope(schemaVersion));
+          var _schemaVersion = Schema.create(schemaVersion, _.defaults(opts, { scope: refs.scope(schemaVersion) }));
           _schemaVersion.validate(data);
           return Schema.create(data, _opts);
         });
