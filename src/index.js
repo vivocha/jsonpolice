@@ -109,7 +109,7 @@ class ValidationError extends Error {
   }
 }
 
-function _createDefaultProperty(schema, obj, key) {
+function _createDefaultProperty(schema, obj, key, isKeyRequired = false) {
   Object.defineProperty(obj, key, {
     get: () => {
       var v = schema.default();
@@ -131,7 +131,7 @@ function _createDefaultProperty(schema, obj, key) {
       }
     },
     configurable: true,
-    enumerable: false
+    enumerable: isKeyRequired
   });
 }
 
@@ -591,9 +591,10 @@ class ObjectSchema extends Schema {
     var def = super.default(data);
     if (defined(def)) {
       if (enumerableAndDefined(this.data, 'properties')) {
+        var r = enumerableAndDefined(this.data, 'required') ? this.data.required : null;
         for (var k in this.data.properties) {
           if (!defined(def[k])) {
-            _createDefaultProperty(this.data.properties[k][__schema], def, k);
+            _createDefaultProperty(this.data.properties[k][__schema], def, k, (r && r.indexOf(k) !== -1));
           }
         }
       }
