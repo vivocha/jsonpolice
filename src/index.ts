@@ -1,11 +1,13 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
 import * as refs from 'jsonref';
 import * as vers from './versions';
 
 var __schema = Symbol();
 var __validating = Symbol();
 var __salmon = Symbol();
-var regexps = {
+var regexps:{
+  [name:string]: RegExp
+}  = {
   'date-time': /^([0-9]+)-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])[Tt]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9]|60)(\.[0-9]+)?(([Zz])|([\+|\-]([01][0-9]|2[0-3]):[0-5][0-9]))$/,
   'email': /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/,
   'hostname': /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/,
@@ -20,30 +22,46 @@ var seps = {
   'pipes': '|'
 };
 
-function defined(v) {
+export interface SchemaOptions extends refs.ParseOptions {
+  removeAdditional?:boolean;
+}
+class SchemaError extends Error {
+  constructor(public scope:string, type:string, public info?:any) {
+    super(type);
+    this.name = 'SchemaError';
+  }
+}
+class ValidationError extends Error {
+  constructor(public path:string, public scope:string, type:string, public info?:any) {
+    super(type);
+    this.name = 'ValidationError';
+  }
+}
+
+function defined(v:any):boolean {
   return typeof v !== 'undefined';
 }
-function enumerableAndDefined(o, k) {
+function enumerableAndDefined(o:any, k:string):boolean {
   return defined(o) && o.propertyIsEnumerable(k) && defined(o[k]);
 }
-function testRegExp(exp, value) {
+function testRegExp(exp:string, value:string):boolean {
   var r = regexps[exp];
   if (!r) {
     r = regexps[exp] = new RegExp(exp);
   }
   return r.test(value);
 }
-function linkProperty(o, i, k) {
+function linkProperty(o:any, i:any, k:string):void {
   Object.defineProperty(o, k, {
     get: () => {
       return i[k];
     },
-    set: (v) => { },
+    set: () => { },
     configurable: false,
     enumerable: true
   });
 }
-function pushProperty(o, i, k) {
+function pushProperty(o:any, i:any, k:string):void {
   Object.defineProperty(o, o.length, {
     get: () => {
       return i[k];
@@ -53,7 +71,7 @@ function pushProperty(o, i, k) {
     enumerable: true
   });
 }
-function mergeProperties(o, i, k) {
+function mergeProperties(o:any, i:any, k:string):void {
   if (o[k].allOf) {
     pushProperty(o[k].allOf, i, k);
   } else {
@@ -63,7 +81,7 @@ function mergeProperties(o, i, k) {
     o[k] = { allOf: a };
   }
 }
-function mergeObjects(o, i, k) {
+function mergeObjects(o:any, i:any, k:string):void {
   if (!enumerableAndDefined(o, k)) {
     o[k] = {};
   }
@@ -75,41 +93,22 @@ function mergeObjects(o, i, k) {
     }
   }
 }
-function assignIfEnumerableAndDefined(o, i, k) {
+function assignIfEnumerableAndDefined(o:any, i:any, k:string):void {
   if (enumerableAndDefined(i, k)) o[k] = i[k];
 }
-function assignIfEnumerableAndDefinedAndNotSet(o, i, k) {
-  if (enumerableAndDefined(i, k) && !enumerableAndDefined(o[k])) o[k] = i[k];
+function assignIfEnumerableAndDefinedAndNotSet(o:any, i:any, k:string):void {
+  if (enumerableAndDefined(i, k) && !enumerableAndDefined(o, k)) o[k] = i[k];
 }
-function assignIfEnumerableAndDefinedAndLessThan(o, i, k) {
-  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] < o[k])) o[k] = i[k];
+function assignIfEnumerableAndDefinedAndLessThan(o:any, i:any, k:string):void {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o, k) || i[k] < o[k])) o[k] = i[k];
 }
-function assignIfEnumerableAndDefinedAndGreaterThan(o, i, k) {
-  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] > o[k])) o[k] = i[k];
+function assignIfEnumerableAndDefinedAndGreaterThan(o:any, i:any, k:string):void {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o, k) || i[k] > o[k])) o[k] = i[k];
 }
-function assignIfEnumerableAndDefinedAndNot(o, i, k, v) {
-  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o[k]) || i[k] !== v)) o[k] = i[k];
+function assignIfEnumerableAndDefinedAndNot(o:any, i:any, k:string, v:any):void {
+  if (enumerableAndDefined(i, k) && (!enumerableAndDefined(o, k) || i[k] !== v)) o[k] = i[k];
 }
-
-class SchemaError extends Error {
-  constructor(schemaScope, type, info) {
-    super(type);
-    this.name = 'SchemaError';
-    this.scope = schemaScope;
-    this.info = info;
-  }
-}
-class ValidationError extends Error {
-  constructor(dataScope, schemaScope, type, info) {
-    super(type);
-    this.name = 'ValidationError';
-    this.path = dataScope;
-    this.scope = schemaScope;
-    this.info = info;
-  }
-}
-
-function _createDefaultProperty(schema, obj, key, isKeyRequired = false) {
+function createDefaultProperty(schema, obj, key) {
   Object.defineProperty(obj, key, {
     get: () => {
       var v = schema.default();
@@ -131,17 +130,17 @@ function _createDefaultProperty(schema, obj, key, isKeyRequired = false) {
       }
     },
     configurable: true,
-    enumerable: isKeyRequired
+    enumerable: false
   });
 }
 
 class Schema {
-  constructor(data, opts) {
-    this.data = data;
-    this.opts = opts;
+  protected scope:string;
+
+  constructor(protected data:any, protected opts:SchemaOptions) {
     this.scope = refs.scope(data) || data.id || opts.scope || '#';
   }
-  init() {
+  init():void {
     if (enumerableAndDefined(this.data, 'allOf')) {
       _.each(this.data.allOf, (data, i) => {
         Schema.create(this.data.allOf[i], _.defaults(this.opts, { scope: this.scope + '/allOf/' + i }));
@@ -161,7 +160,7 @@ class Schema {
       Schema.create(this.data.not, _.defaults(this.opts, { scope: this.scope + '/not' }));
     }
   }
-  default(data) {
+  default(data:any):any {
     var def;
     if (defined(data)) {
       def = data;
@@ -186,13 +185,12 @@ class Schema {
     }
     return def;
   }
-  validate(data, path) {
+  validate(data:any, path:string = ''):any {
     if (this[__validating]) {
       return data;
     } else {
       this[__validating] = true;
     }
-    path = path || '';
     data = this.default(data);
     if (typeof data !== 'undefined') {
       try {
@@ -222,10 +220,10 @@ class Schema {
     delete this[__validating];
     return data;
   }
-  validateType(data, path) {
+  validateType(data:any, path:string):any {
     throw new SchemaError(this.scope, 'type', data.type);
   }
-  validateEnum(data, path) {
+  validateEnum(data:any, path:string):any {
     for (var i = 0, found = false ; !found && i < this.data.enum.length ; i++) {
       found = _.isEqual(data, this.data.enum[i]);
     }
@@ -234,13 +232,13 @@ class Schema {
     }
     return data;
   }
-  validateAllOf(data, path) {
+  validateAllOf(data:any, path:string):any {
     for (var i = 0 ; i < this.data.allOf.length ; i++) {
       data = this.data.allOf[i][__schema].validate(data, path);
     }
     return data;
   }
-  validateAnyOf(data, path) {
+  validateAnyOf(data:any, path:string):any {
     for (var i = 0, found = false, _data ; !found && i < this.data.anyOf.length ; i++) {
       try {
         _data = this.data.anyOf[i][__schema].validate(data, path);
@@ -252,7 +250,7 @@ class Schema {
     }
     return _data;
   }
-  validateOneOf(data, path) {
+  validateOneOf(data:any, path:string):any {
     for (var i = 0, count = 0, _data ; count < 2 && i < this.data.oneOf.length ; i++) {
       try {
         _data = this.data.oneOf[i][__schema].validate(data, path);
@@ -264,7 +262,7 @@ class Schema {
     }
     return _data;
   }
-  validateNot(data, path) {
+  validateNot(data:any, path:string):any {
     try {
       this.data.not[__schema].validate(data, path);
     } catch(e) {
@@ -272,7 +270,7 @@ class Schema {
     }
     throw new ValidationError(path, this.scope, 'not');
   }
-  static create(data, opts) {
+  static create(data:any, opts:SchemaOptions):Schema {
     var schema;
     if (defined(data)) {
       if (data[__schema] instanceof Schema) {
@@ -312,7 +310,6 @@ class Schema {
                 break;
               default:
                 throw new SchemaError(opts.scope, 'type', data.type);
-                break;
             }
           }
         } else {
@@ -326,16 +323,16 @@ class Schema {
       throw new SchemaError(opts.scope, 'no_data');
     }
   }
-  static flatten(data) {
+  static flatten(data:any):any {
     if (!enumerableAndDefined(data, 'allOf')) {
       return data;
     } else {
-      var out = {};
+      var out:any = {};
       // Init the data that must be taken from the outer schema
       if (enumerableAndDefined(data, 'id')) out.id = data.id;
       if (enumerableAndDefined(data, '$schema')) out.$schema = data.$schema;
 
-      return _.reduce(data.allOf.concat(data), function(o, i, k) {
+      return _.reduce(data.allOf.concat(data), function(o:any, i:any) {
         if (i !== data) {
           i = Schema.flatten(i);
         }
@@ -430,10 +427,10 @@ class Schema {
 }
 
 class ArraySchema extends Schema {
-  constructor(data, opts) {
+  constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  init() {
+  init():void {
     super.init();
     if (enumerableAndDefined(this.data, 'items')) {
       if (Array.isArray(this.data.items)) {
@@ -443,18 +440,18 @@ class ArraySchema extends Schema {
       } else if (typeof this.data.items === 'object') {
         Schema.create(this.data.items, _.defaults(this.opts, { scope: this.scope + '/items' }));
       } else {
-        throw new SchemaError(this.scope, 'items', data.items);
+        throw new SchemaError(this.scope, 'items', this.data.items);
       }
     }
     if (enumerableAndDefined(this.data, 'additionalItems')) {
       if (typeof this.data.additionalItems === 'object') {
         Schema.create(this.data.additionalItems, _.defaults(this.opts, { scope: this.scope + '/additionalItems' }));
       } else if (typeof this.data.additionalItems !== 'boolean') {
-        throw new SchemaError(this.scope, 'additionalItems', data.additionalItems);
+        throw new SchemaError(this.scope, 'additionalItems', this.data.additionalItems);
       }
     }
   }
-  validateType(data, path) {
+  validateType(data:any, path:string):any {
     if (typeof data === 'string') {
       var sep = seps[this.data.collectionFormat || 'csv'];
       if (!sep) {
@@ -491,10 +488,10 @@ class ArraySchema extends Schema {
 }
 
 class BooleanSchema extends Schema {
-  constructor(data, opts) {
+  constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data, path) {
+  validateType(data:any, path:string):any {
     if (typeof data === 'string') {
       if (data === 'true' || data === '1') {
         data = true;
@@ -510,10 +507,10 @@ class BooleanSchema extends Schema {
 }
 
 class NumberSchema extends Schema {
-  constructor(data, opts) {
+  constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data, path) {
+  validateType(data:any, path:string):any {
     if (typeof data === 'string') {
       data = +data;
     }
@@ -531,10 +528,10 @@ class NumberSchema extends Schema {
 }
 
 class IntegerSchema extends NumberSchema {
-  constructor(data, opts) {
+  constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data, path) {
+  validateType(data:any, path:string):any {
     data = super.validateType(data, path)
     if (parseInt(data) !== data) {
       throw new ValidationError(path, this.scope, 'type');
@@ -544,10 +541,10 @@ class IntegerSchema extends NumberSchema {
 }
 
 class NullSchema extends Schema {
-  constructor(data, opts) {
+  constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data, path) {
+  validateType(data:any, path:string):any {
     if (typeof data !== 'null') {
       throw new ValidationError(path, this.scope, 'type');
     }
@@ -556,10 +553,10 @@ class NullSchema extends Schema {
 }
 
 class ObjectSchema extends Schema {
-  constructor(data, opts) {
+  constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  init() {
+  init():void {
     super.init();
     var i;
     if (enumerableAndDefined(this.data, 'properties')) {
@@ -576,7 +573,7 @@ class ObjectSchema extends Schema {
       if (typeof this.data.additionalProperties === 'object') {
         Schema.create(this.data.additionalProperties, _.defaults(this.opts, { scope: this.scope + '/additionalProperties' }));
       } else if (typeof this.data.additionalProperties !== 'boolean') {
-        throw new SchemaError(this.scope, 'additionalProperties', data.additionalProperties);
+        throw new SchemaError(this.scope, 'additionalProperties', this.data.additionalProperties);
       }
     }
     if (enumerableAndDefined(this.data, 'dependencies')) {
@@ -587,21 +584,20 @@ class ObjectSchema extends Schema {
       }
     }
   }
-  default(data) {
+  default(data:any):any {
     var def = super.default(data);
     if (defined(def)) {
       if (enumerableAndDefined(this.data, 'properties')) {
-        var r = enumerableAndDefined(this.data, 'required') ? this.data.required : null;
         for (var k in this.data.properties) {
           if (!defined(def[k])) {
-            _createDefaultProperty(this.data.properties[k][__schema], def, k, (r && r.indexOf(k) !== -1));
+            createDefaultProperty(this.data.properties[k][__schema], def, k);
           }
         }
       }
     }
     return def;
   }
-  validateType(data, path) {
+  validateType(data:any, path:string):any {
     var props = Object.keys(data);
     if (typeof data !== 'object' || Array.isArray(data)) {
       throw new ValidationError(path, this.scope, 'type');
@@ -670,10 +666,10 @@ class ObjectSchema extends Schema {
 }
 
 class StringSchema extends Schema {
-  constructor(data, opts) {
+  constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data, path) {
+  validateType(data:any, path:string):any {
     if (this.data.format === 'date-time') {
       if (!(data instanceof Date)) {
         if (typeof data !== 'string') {
@@ -701,7 +697,7 @@ class StringSchema extends Schema {
   }
 }
 
-export function create(dataOrUri, opts = {}) {
+export function create(dataOrUri:any, opts:SchemaOptions = {}) {
   if (!dataOrUri) {
     throw new SchemaError(opts.scope, 'no_data');
   }
@@ -723,19 +719,19 @@ export function create(dataOrUri, opts = {}) {
     });
   }
 }
-export function flatten(dataOrUri, opts) {
+export function flatten(dataOrUri:any, opts:SchemaOptions = {}) {
   return create(dataOrUri, opts).then(function(schema) {
     return Schema.flatten(schema.data);
   });
 }
-export function getVersion(dataOrUri, opts) {
+export function getVersion(dataOrUri:any, opts:SchemaOptions = {}) {
   return vers.get(dataOrUri, opts);
 }
-export function addVersion(dataOrUri, opts) {
+export function addVersion(dataOrUri:any, opts:SchemaOptions = {}) {
   return vers.parseKnown().then(function() {
     return vers.add(dataOrUri, opts);
   });
 }
-export function fireValidationError(dataScope, schemaScope, type, info) {
+export function fireValidationError(dataScope:string, schemaScope:string, type:string, info?:any) {
   throw new ValidationError(dataScope, schemaScope, type, info);
 }

@@ -7,10 +7,9 @@ addVersion function.
 The library decorates parsed objects in order to have them return default values defined the in the schema, for
 undefined properties.
 
-[![NPM version](https://badge.fury.io/js/jsonpolice.png)](http://badge.fury.io/js/jsonpolice)
-
-[![Dependency Status](https://david-dm.org/vivocha/jsonpolice/status.svg)](https://david-dm.org/vivocha/jsonpolice)
-[![devDependency Status](https://david-dm.org/vivocha/jsonpolice/dev-status.svg)](https://david-dm.org/vivocha/jsonpolice#info=devDependencies)
+[![travis build](https://img.shields.io/travis/vivocha/jsonpolice.svg)](https://travis-ci.org/vivocha/jsonpolice)
+[![codecov coverage](https://img.shields.io/codecov/c/github/vivocha/jsonpolice.svg)](https://codecov.io/gh/vivocha/jsonpolice)
+[![npm version](https://img.shields.io/npm/v/jsonpolice.svg)](https://www.npmjs.com/package/jsonpolice)
 
 ## Install
 
