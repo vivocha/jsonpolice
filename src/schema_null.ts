@@ -6,7 +6,7 @@ export class NullSchema extends Schema {
     super(data, opts);
   }
   validateType(data:any, path:string):any {
-    if (data !== 'null') {
+    if (data !== null) {
       throw new ValidationError(path, this.scope, 'type');
     }
     return data;
