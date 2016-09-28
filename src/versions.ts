@@ -159,6 +159,9 @@ var knownVersions:VersionRegistry = {
 var parsedVersions:VersionRegistry = { };
 var defaultVersion:string = 'http://json-schema.org/draft-04/schema#';
 
+export function reset() {
+  parsedVersions = { };
+}
 export function add(dataOrUri:any, opts:refs.ParseOptions = {}): Promise<any> {
   return refs.parse(dataOrUri, {
     scope: opts.scope,
@@ -166,12 +169,11 @@ export function add(dataOrUri:any, opts:refs.ParseOptions = {}): Promise<any> {
     retriever: opts.retriever
   });
 }
-export function get(dataOrUri:any, opts:refs.ParseOptions = {}): Promise<any> {
-  var ver = dataOrUri || defaultVersion;
-  if (typeof ver === 'string' && parsedVersions[ver]) {
-    return Promise.resolve(parsedVersions[ver]);
-  } else if (typeof ver === 'string' && knownVersions[ver]) {
-    return refs.parse(knownVersions[ver], {
+export function get(dataOrUri:any = defaultVersion, opts:refs.ParseOptions = {}): Promise<any> {
+  if (typeof dataOrUri === 'string' && parsedVersions[dataOrUri]) {
+    return Promise.resolve(parsedVersions[dataOrUri]);
+  } else if (typeof dataOrUri === 'string' && knownVersions[dataOrUri]) {
+    return refs.parse(knownVersions[dataOrUri], {
       scope: opts.scope,
       store: parsedVersions,
       retriever: opts.retriever
@@ -185,7 +187,7 @@ export function parseKnown():Promise<VersionRegistry> {
   _.each(knownVersions, function(data, uri) {
     if (!parsedVersions[uri]) {
       p = p.then(function() {
-        return refs.parse(data, {
+        return refs.parse(_.cloneDeep(data), {
           scope: uri,
           store: parsedVersions
         });
