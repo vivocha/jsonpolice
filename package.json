@@ -3,6 +3,7 @@
   "version": "0.0.0-semantically-released",
   "description": "JSON Schema parser and validator",
   "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "scripts": {
     "postinstall": "typings install",
     "prebuild": "rimraf dist",
@@ -54,8 +55,8 @@
     "commitizen": {
       "path": "node_modules/cz-conventional-changelog"
     },
-    "ghooks": {
-      "__pre-commit": "npm run build && npm run cover && npm run check-coverage"
+    "__ghooks__TODO": {
+      "pre-commit": "npm run build && npm run cover && npm run check-coverage"
     }
   },
   "dependencies": {
