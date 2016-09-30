@@ -5,24 +5,10 @@ import { __schema, defined, enumerableAndDefined, SchemaOptions, SchemaError, Va
 var __validating = Symbol();
 
 function linkProperty(o:any, i:any, k:string):void {
-  Object.defineProperty(o, k, {
-    get: () => {
-      return i[k];
-    },
-    set: () => { },
-    configurable: false,
-    enumerable: true
-  });
+  o[k] = i[k];
 }
 function pushProperty(o:any, i:any, k:string):void {
-  Object.defineProperty(o, o.length, {
-    get: () => {
-      return i[k];
-    },
-    set: (v) => { },
-    configurable: false,
-    enumerable: true
-  });
+  o.push(i[k]);
 }
 function mergeProperties(o:any, i:any, k:string):void {
   if (o[k].allOf) {
@@ -39,9 +25,7 @@ function mergeObjects(o:any, i:any, k:string):void {
     o[k] = {};
   }
   for (var j in i[k]) {
-    if (enumerableAndDefined(o[k], j)) {
-      mergeProperties(o[k], i[k], j);
-    } else {
+    if (!enumerableAndDefined(o[k], j)) {
       linkProperty(o[k], i[k], j);
     }
   }
@@ -320,16 +304,27 @@ export class Schema {
           mergeObjects(o, i , 'patternProperties');
         }
         if (enumerableAndDefined(i, 'dependencies')) {
-          if (enumerableAndDefined(o, 'dependencies')) {
-            if (Array.isArray(o.dependencies) && Array.isArray(i.dependencies)) {
-              o.dependencies = _.uniq((o.dependencies || []).concat(i.dependencies));
-            } else if (typeof o.dependencies === 'object' && typeof i.dependencies === 'object') {
-              mergeProperties(o, i, 'dependencies');
+          if (!enumerableAndDefined(o, 'dependencies')) {
+            o.dependencies = {};
+          }
+          for (var k in i.dependencies) {
+            if (enumerableAndDefined(o.dependencies, k)) {
+              var _o = o.dependencies;
+              var _i = i.dependencies;
+              if (Array.isArray(_o[k]) && Array.isArray(_i[k])) {
+                _o[k] = _.uniq(_o[k].concat(_i[k]));
+              } else {
+                if (Array.isArray(_o[k])) {
+                  _o[k] = { dependencies: { [k]: _o[k] } }
+                }
+                if (Array.isArray(_i[k])) {
+                  _i = { [k]: { dependencies: { [k]: _i[k] } } };
+                }
+                mergeProperties(_o, _i, k);
+              }
             } else {
-              linkProperty(o, i, 'dependencies');
+              linkProperty(o.dependencies, i.dependencies, k);
             }
-          } else {
-            linkProperty(o, i, 'dependencies');
           }
         }
         assignIfEnumerableAndDefinedAndNotSet(o, i, 'enum');
