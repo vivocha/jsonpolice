@@ -19,15 +19,14 @@ export function create(dataOrUri:any, opts:SchemaOptions = {}) {
     return Promise.resolve(dataOrUri[__schema]);
   } else {
     return vers.parseKnown().then(function(versions) {
-      var _opts = opts || {};
-      if (!_opts.scope) _opts.scope = (typeof dataOrUri === 'string' ? dataOrUri : '#');
-      if (!_opts.store) _opts.store = {};
-      _.defaults(_opts.store, versions);
-      return refs.parse(dataOrUri, _opts).then(function(data) {
+      if (!opts.scope) opts.scope = (typeof dataOrUri === 'string' ? dataOrUri : '#');
+      if (!opts.store) opts.store = {};
+      _.defaults(opts.store, versions);
+      return refs.parse(dataOrUri, opts).then(function(data) {
         return vers.get(data.$schema, opts).then(function(schemaVersion) {
           var _schemaVersion = Schema.create(schemaVersion, _.defaults(opts, { scope: refs.scope(schemaVersion) }));
           _schemaVersion.validate(data);
-          return Schema.create(data, _opts);
+          return Schema.create(data, opts);
         });
       });
     });
