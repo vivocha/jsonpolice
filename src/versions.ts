@@ -1,7 +1,10 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
 import * as refs from 'jsonref';
 
-var knownVersions = {
+export type VersionRegistry = {
+  [id:string]:any;
+}
+var knownVersions:VersionRegistry = {
   'http://json-schema.org/draft-04/schema#': {
     "id": "http://json-schema.org/draft-04/schema#",
     "$schema": "http://json-schema.org/draft-04/schema#",
@@ -153,39 +156,38 @@ var knownVersions = {
     "default": {}
   }
 };
-var parsedVersions = {
-};
-var defaultVersion = 'http://json-schema.org/draft-04/schema#';
+var parsedVersions:VersionRegistry = { };
+var defaultVersion:string = 'http://json-schema.org/draft-04/schema#';
 
-export function add(dataOrUri, opts) {
-  var _opts = opts || {};
+export function reset() {
+  parsedVersions = { };
+}
+export function add(dataOrUri:any, opts:refs.ParseOptions = {}): Promise<any> {
   return refs.parse(dataOrUri, {
-    scope: _opts.scope,
+    scope: opts.scope,
     store: parsedVersions,
-    retriever: _opts.retriever
+    retriever: opts.retriever
   });
 }
-export function get(dataOrUri, opts) {
-  var ver = dataOrUri || defaultVersion;
-  var _opts = opts || {};
-  if (typeof ver === 'string' && parsedVersions[ver]) {
-    return Promise.resolve(parsedVersions[ver]);
-  } else if (typeof ver === 'string' && knownVersions[ver]) {
-    return refs.parse(knownVersions[ver], {
-      scope: _opts.scope,
+export function get(dataOrUri:any = defaultVersion, opts:refs.ParseOptions = {}): Promise<any> {
+  if (typeof dataOrUri === 'string' && parsedVersions[dataOrUri]) {
+    return Promise.resolve(parsedVersions[dataOrUri]);
+  } else if (typeof dataOrUri === 'string' && knownVersions[dataOrUri]) {
+    return refs.parse(knownVersions[dataOrUri], {
+      scope: opts.scope,
       store: parsedVersions,
-      retriever: _opts.retriever
+      retriever: opts.retriever
     });
   } else {
     return add(dataOrUri, opts);
   }
 }
-export function parseKnown() {
+export function parseKnown():Promise<VersionRegistry> {
   var p = Promise.resolve(true);
   _.each(knownVersions, function(data, uri) {
     if (!parsedVersions[uri]) {
       p = p.then(function() {
-        return refs.parse(data, {
+        return refs.parse(_.cloneDeep(data), {
           scope: uri,
           store: parsedVersions
         });
