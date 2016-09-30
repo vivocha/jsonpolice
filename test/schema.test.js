@@ -3,6 +3,7 @@ var chai = require('chai')
   , should = chai.should()
   , global = require('../dist/global')
   , Schema = require('../dist/schema').Schema
+  , util = require('util')
 
 chai.use(spies);
 
@@ -149,6 +150,20 @@ describe('Schema', function() {
       }, global.SchemaError, 'type');
     });
 
+    it('should create a custom type with a corresponding factory is registered', function(done) {
+      class CustomType extends Schema {
+        constructor(data, opts) {
+          super(data, opts);
+          done();
+        }
+      }
+      Schema.registerFactory('test', CustomType);
+      var s = Schema.create({type: 'test'});
+      should.exist(s);
+      s.should.be.a.instanceOf(Schema);
+      s.should.be.a.instanceOf(CustomType);
+    });
+
   });
 
   describe('flatten', function() {
@@ -246,7 +261,401 @@ describe('Schema', function() {
       b.pattern.should.equal(a2.pattern);
     });
 
-    it('should merge each property with its specific rules');
+    it('should merge items', function() {
+      var a1 = {
+        items: {
+          type: 'object',
+          properties: {
+            d: {
+              type: 'null'
+            }
+          }
+        },
+        allOf: [
+          {
+            items: {
+              type: 'object',
+              properties: {
+                a: {
+                  type: 'number'
+                }
+              }
+            }
+          }, {
+            items: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            }
+          }, {
+            items: {
+              type: 'object',
+              properties: {
+                c: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        ]
+      };
+      var b1 = Schema.flatten(a1);
+      b1.items.allOf.should.have.length(4);
+    });
+
+    it('should merge dependencies', function() {
+      var a1 = {
+        allOf: [
+          {
+            dependencies: {
+              a: [ 'x', 'y' ],
+              b: [ 'x' ],
+              c: {
+                type: 'object'
+              },
+              d: [ 'x' ],
+              e: [ 'y' ]
+            }
+          }, {
+            dependencies: {
+              a: [ 'y', 'z' ],
+              b: [ 'y'],
+              c: [ 'z' ],
+              d: {
+                type: 'integer'
+              },
+              f: {
+                type: 'boolean'
+              }
+            }
+          }
+        ]
+      };
+      var b1 = Schema.flatten(a1);
+      b1.dependencies.a.should.deep.equal([ 'x', 'y', 'z' ]);
+      b1.dependencies.b.should.deep.equal([ 'x', 'y' ]);
+      b1.dependencies.c.should.deep.equal({ allOf: [ { type: 'object' }, { dependencies: { c: [ 'z' ] } } ] });
+      b1.dependencies.d.should.deep.equal({ allOf: [ { dependencies: { d: [ 'x' ] } }, { type: 'integer' } ] });
+      b1.dependencies.e.should.deep.equal([ 'y' ]);
+      b1.dependencies.f.should.deep.equal({ type: 'boolean' });
+    });
+
+    it('should merge additional items and properties', function() {
+      var a1 = {
+        additionalProperties: {
+          type: 'object',
+          properties: {
+            d: {
+              type: 'null'
+            }
+          }
+        },
+        allOf: [
+          {
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                a: {
+                  type: 'number'
+                }
+              }
+            },
+            additionalItems: {
+              type: 'object',
+              properties: {
+                a: {
+                  type: 'number'
+                }
+              }
+            }
+          }, {
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            },
+            additionalItems: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            }
+          }, {
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                c: {
+                  type: 'string'
+                }
+              }
+            },
+            additionalItems: {
+              type: 'string',
+              properties: {
+                c: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        ]
+      };
+      var b1 = Schema.flatten(a1);
+      b1.additionalProperties.allOf.should.have.length(4);
+      b1.additionalItems.allOf.should.have.length(3);
+
+      var a2 = {
+        allOf: [
+          {
+            additionalProperties: false,
+            additionalItems: false
+          }, {
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            },
+            additionalItems: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            }
+          }
+        ]
+      };
+      var b2 = Schema.flatten(a2);
+      b2.additionalProperties.should.equal(false);
+      b2.additionalItems.should.equal(false);
+
+      var a3 = {
+        allOf: [
+          {
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            },
+            additionalItems: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            }
+          }, {
+            additionalProperties: false,
+            additionalItems: false
+          }
+        ]
+      };
+      var b3 = Schema.flatten(a3);
+      b3.additionalProperties.should.equal(false);
+      b3.additionalItems.should.equal(false);
+
+      var a4 = {
+        allOf: [
+          {
+            additionalProperties: true,
+            additionalItems: true
+          }, {
+            additionalProperties: false,
+            additionalItems: false
+          }
+        ]
+      };
+      var b4 = Schema.flatten(a4);
+      b4.additionalProperties.should.equal(false);
+      b4.additionalItems.should.equal(false);
+
+      var a5 = {
+        allOf: [
+          {
+            additionalProperties: true,
+            additionalItems: true
+          },
+          {
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            },
+            additionalItems: {
+              type: 'object',
+              properties: {
+                b: {
+                  type: 'boolean'
+                }
+              }
+            }
+          }
+        ]
+      };
+      var b5 = Schema.flatten(a5);
+      b5.additionalProperties.should.equal(a5.allOf[1].additionalProperties);
+      b5.additionalItems.should.equal(a5.allOf[1].additionalItems);
+
+      var a6 = {
+        allOf: [
+          {
+            additionalProperties: true,
+            additionalItems: true
+          }, {
+            additionalProperties: true,
+            additionalItems: true
+          }
+        ]
+      };
+      var b6 = Schema.flatten(a6);
+      b6.additionalProperties.should.equal(true);
+      b6.additionalItems.should.equal(true);
+    });
+
+    it('should merge each property with its specific rules', function () {
+      var a1 = {
+        type: 'test',
+        allOf: [
+          {
+            default: 5,
+            minimum: 1,
+            maximum: 2,
+            minLength: 1,
+            maxLength: 2,
+            exclusiveMinimum: true,
+            exclusiveMaximum: true,
+            required: [ 'a', 'b' ],
+            definitions: {
+              x: 1,
+              y: 2
+            },
+            properties: {
+              m: 1,
+              n: 2
+            },
+            patternProperties: {
+              m: 1,
+              n: 2
+            }
+          }, {
+            default: 6,
+            minimum: 0,
+            maximum: 3,
+            minLength: 0,
+            maxLength: 3,
+            exclusiveMinimum: false,
+            exclusiveMaximum: false,
+            required: [ 'b', 'c' ],
+            definitions: {
+              y: 3,
+              z: 4
+            },
+            properties: {
+              n: 3,
+              o: 4
+            },
+            patternProperties: {
+              n: 3,
+              o: 4
+            }
+          }
+        ]
+      };
+      var b1 = Schema.flatten(a1);
+      b1.type.should.equal('test');
+      b1.default.should.equal(5);
+      b1.minimum.should.equal(1);
+      b1.maximum.should.equal(2);
+      b1.minLength.should.equal(1);
+      b1.maxLength.should.equal(2);
+      b1.exclusiveMinimum.should.equal(false);
+      b1.exclusiveMaximum.should.equal(false);
+      b1.required.should.have.length(3).and.deep.equal([ 'a', 'b', 'c' ]);
+      b1.definitions.should.deep.equal({ x: 1, y: 2, z: 4 });
+      b1.properties.should.deep.equal({ m: 1, n: 2, o: 4 });
+      b1.patternProperties.should.deep.equal({ m: 1, n: 2, o: 4 });
+
+      var a2 = {
+        type: 'test',
+        allOf: [
+          {
+            default: 6,
+            minimum: 0,
+            maximum: 3,
+            minLength: 0,
+            maxLength: 3,
+            exclusiveMinimum: false,
+            exclusiveMaximum: false,
+            required: [ 'b', 'c' ],
+            definitions: {
+              y: 3,
+              z: 4
+            },
+            properties: {
+              n: 3,
+              o: 4
+            },
+            patternProperties: {
+              n: 3,
+              o: 4
+            }
+          }, {
+            default: 5,
+            minimum: 1,
+            maximum: 2,
+            minLength: 1,
+            maxLength: 2,
+            exclusiveMinimum: true,
+            exclusiveMaximum: true,
+            required: [ 'a', 'b' ],
+            definitions: {
+              x: 1,
+              y: 2
+            },
+            properties: {
+              m: 1,
+              n: 2
+            },
+            patternProperties: {
+              m: 1,
+              n: 2
+            }
+          }
+        ]
+      };
+      var b2 = Schema.flatten(a2);
+      b2.type.should.equal('test');
+      b2.default.should.equal(6);
+      b2.minimum.should.equal(1);
+      b2.maximum.should.equal(2);
+      b2.minLength.should.equal(1);
+      b2.maxLength.should.equal(2);
+      b1.exclusiveMinimum.should.equal(false);
+      b1.exclusiveMaximum.should.equal(false);
+      b2.required.should.have.length(3).and.deep.equal([ 'b', 'c', 'a' ]);
+      b2.definitions.should.deep.equal({ x: 1, y: 3, z: 4 });
+      b2.properties.should.deep.equal({ m: 1, n: 3, o: 4 });
+      b2.patternProperties.should.deep.equal({ m: 1, n: 3, o: 4 });
+    });
 
   });
 
@@ -280,15 +689,165 @@ describe('Schema', function() {
     });
 
     describe('allOf', function() {
+      it('should throw if not all schemas validate', function() {
+        var s = new Schema({
+          allOf: [
+            {
+              type: 'integer',
+              minimum: 3
+            },
+            {
+              type: 'integer',
+              maximum: 5
+            }
+          ]
+        }, { });
+        s.init();
+        should.throw(function() {
+          s.validate(2);
+        }, global.ValidationError, 'minimum');
+        should.throw(function() {
+          s.validate(6);
+        }, global.ValidationError, 'maximum');
+        should.not.throw(function() {
+          s.validate(4);
+        });
+      });
+      it('should use first encountered default as default', function() {
+        var s = Schema.create({
+          type: 'object',
+          properties: {
+            a: {
+              allOf: [
+                {
+                  type: 'integer',
+                  default: 5
+                },
+                {
+                  type: 'integer',
+                  default: 6
+                }
+              ]
+            }
+          }
+        }, { });
+        s.validate({}).a.should.equal(5);
+      });
     });
 
     describe('anyOf', function() {
+      it('should throw if none of schemas validate', function() {
+        var s = new Schema({
+          anyOf: [
+            {
+              type: 'integer',
+              minimum: 6
+            },
+            {
+              type: 'integer',
+              multipleOf: 3
+            }
+          ]
+        }, { });
+        s.init();
+        should.not.throw(function() {
+          s.validate(3);
+        });
+        should.not.throw(function() {
+          s.validate(7);
+        });
+        should.throw(function() {
+          s.validate(2);
+        }, global.ValidationError, 'anyOf');
+      });
+      it('should use first encountered default as default', function() {
+        var s = Schema.create({
+          type: 'object',
+          properties: {
+            a: {
+              anyOf: [
+                {
+                  type: 'integer',
+                  default: 5
+                },
+                {
+                  type: 'string',
+                  default: 'test'
+                }
+              ]
+            }
+          }
+        }, { });
+        s.validate({}).a.should.equal(5);
+      });
     });
 
     describe('oneOf', function() {
+      it('should throw if more than one schema validate', function() {
+        var s = new Schema({
+          oneOf: [
+            {
+              type: 'integer',
+              minimum: 6
+            },
+            {
+              type: 'integer',
+              multipleOf: 3
+            }
+          ]
+        }, { });
+        s.init();
+        should.not.throw(function() {
+          s.validate(3);
+        });
+        should.not.throw(function() {
+          s.validate(7);
+        });
+        should.throw(function() {
+          s.validate(12);
+        }, global.ValidationError, 'oneOf');
+      });
+      it('should use first encountered default as default', function() {
+        var s = Schema.create({
+          type: 'object',
+          properties: {
+            a: {
+              oneOf: [
+                {
+                  type: 'integer',
+                  default: 5
+                },
+                {
+                  type: 'string',
+                  default: 'test'
+                }
+              ]
+            }
+          }
+        }, { });
+        s.validate({}).a.should.equal(5);
+      });
     });
 
     describe('not', function() {
+      it('should throw if the schema validates', function() {
+        var s = new Schema({
+          not: {
+            type: 'integer',
+            multipleOf: 3
+          }
+        }, { });
+        s.init();
+        should.not.throw(function() {
+          s.validate('ciao');
+        });
+        should.not.throw(function() {
+          s.validate(7);
+        });
+        should.throw(function() {
+          s.validate(6);
+        }, global.ValidationError, 'not');
+      });
     });
 
   });

@@ -11,13 +11,13 @@ describe('jsonpolice', function() {
 
   describe('create', function() {
 
-    it('should throw a SchemaError when called with no args'/*, function() {
+    it('should throw a SchemaError when called with no args', function() {
       should.throw(function() {
         jp.create();
       }, jp.SchemaError, 'no_data');
-    }*/);
+    });
 
-    it('should create a Schema'/*, function() {
+    it('should create a Schema', function() {
       var data = {};
       return jp.create(data).then(function(s) {
         should.exist(s);
@@ -26,7 +26,7 @@ describe('jsonpolice', function() {
         should.exist(s.opts.store['#']);
         s.opts.store['#'].should.equal(data);
       });
-    }*/);
+    });
 
     it('should return the passed data when creating a schema from data already used to create a schema'/*, function() {
       var data = {};
