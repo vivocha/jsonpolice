@@ -64,7 +64,7 @@ export class ObjectSchema extends Schema {
   }
   default(data:any):any {
     var def = super.default(data);
-    if (defined(def)) {
+    if (defined(def) && def !== null && typeof def === 'object') {
       if (enumerableAndDefined(this.data, 'properties')) {
         for (var k in this.data.properties) {
           if (!defined(def[k])) {
@@ -76,10 +76,11 @@ export class ObjectSchema extends Schema {
     return def;
   }
   validateType(data:any, path:string):any {
-    var props = Object.keys(data);
-    if (typeof data !== 'object' || Array.isArray(data)) {
+    if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       throw new ValidationError(path, this.scope, 'type');
-    } else if (enumerableAndDefined(this.data, 'maxProperties') && props.length > this.data.maxProperties) {
+    }
+    var props = Object.keys(data);
+    if (enumerableAndDefined(this.data, 'maxProperties') && props.length > this.data.maxProperties) {
       throw new ValidationError(path, this.scope, 'maxProperties');
     } else if (enumerableAndDefined(this.data, 'minProperties') && props.length < this.data.minProperties) {
       throw new ValidationError(path, this.scope, 'minProperties');
@@ -130,10 +131,7 @@ export class ObjectSchema extends Schema {
                 throw new ValidationError(path + '/' + k, this.scope, 'property');
               }
             } else if (typeof this.data.additionalProperties === 'object') {
-              let s = this.data.additionalProperties[__schema];
-              if(s) {
-                data[k] = s.validate(data[k], path + '/' + k);
-              }
+              this.data.additionalProperties[__schema].validate(data[k], path + '/' + k);
             }
           }
         }
