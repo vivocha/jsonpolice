@@ -5,7 +5,6 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
-    "postinstall": "typings install",
     "prebuild": "rimraf dist",
     "build": "tsc",
     "commit": "git-cz",
@@ -37,6 +36,7 @@
   },
   "homepage": "https://github.com/vivocha/jsonpolice#readme",
   "devDependencies": {
+    "@types/lodash": "4.14.37",
     "chai": "3.5.0",
     "chai-as-promised": "5.3.0",
     "chai-spies": "0.7.1",
@@ -48,8 +48,7 @@
     "nyc": "8.3.0",
     "rimraf": "2.5.4",
     "semantic-release": "^4.3.5",
-    "typescript": "2.0.3",
-    "typings": "1.4.0"
+    "typescript": "2.0.3"
   },
   "config": {
     "commitizen": {
@@ -60,7 +59,7 @@
     }
   },
   "dependencies": {
-    "jsonref": "^3.3.1",
+    "jsonref": "^3.4.0",
     "lodash": "^4.5.1"
   }
 }
