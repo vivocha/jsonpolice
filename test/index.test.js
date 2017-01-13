@@ -46,13 +46,10 @@ describe('jsonpolice', function() {
     });
 
     it('should create a known Schema by uri', function() {
-      var opts = {
-        scope: 'test',
-        store: {}
-      };
-      var data = {};
-      return jp.create(data, opts).then(function() {
-        return jp.create('test', opts).then(function(s) {
+      let store = {};
+      let data = {};
+      return jp.create(data, { scope: 'test', store }).then(function() {
+        return jp.create('test', { store }).then(function(s) {
           s.should.equal(data[global.__schema]);
         });
       });
@@ -79,6 +76,20 @@ describe('jsonpolice', function() {
         return jp.create(data).then(function(s2) {
           should.exist(s2);
           s2.should.equal(s1);
+        });
+      });
+    });
+
+    it('should not throw additionalProperties is not set and an additional property is found', function() {
+      return jp.create({
+        type: 'object',
+        properties: {
+          a: { type: 'number'}
+        }
+      }).then(function(s) {
+        console.log(s, s.data.additionalProperties, s.data.additionalProperties.validate);
+        should.not.throw(function () {
+          s.validate({ a: 1, b: false });
         });
       });
     });
