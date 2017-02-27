@@ -11,6 +11,8 @@ import './schema_null';
 import './schema_object';
 import './schema_string';
 
+export { Schema } from './schema';
+
 export function create(dataOrUri:any, opts:SchemaOptions = {}) {
   if (!dataOrUri) {
     throw new SchemaError(opts.scope, 'no_data');
