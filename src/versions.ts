@@ -4,7 +4,7 @@ import * as refs from 'jsonref';
 export type VersionRegistry = {
   [id:string]:any;
 }
-var knownVersions:VersionRegistry = {
+let knownVersions:VersionRegistry = {
   'http://json-schema.org/draft-04/schema#': {
     "id": "http://json-schema.org/draft-04/schema#",
     "$schema": "http://json-schema.org/draft-04/schema#",
@@ -156,8 +156,8 @@ var knownVersions:VersionRegistry = {
     "default": {}
   }
 };
-var parsedVersions:VersionRegistry = { };
-var defaultVersion:string = 'http://json-schema.org/draft-04/schema#';
+let parsedVersions:VersionRegistry = { };
+let defaultVersion:string = 'http://json-schema.org/draft-04/schema#';
 
 export function reset() {
   parsedVersions = { };
@@ -183,7 +183,7 @@ export function get(dataOrUri:any = defaultVersion, opts:refs.ParseOptions = {})
   }
 }
 export function parseKnown():Promise<VersionRegistry> {
-  var p = Promise.resolve(true);
+  let p = Promise.resolve(true);
   _.each(knownVersions, function(data, uri) {
     if (!parsedVersions[uri]) {
       p = p.then(function() {

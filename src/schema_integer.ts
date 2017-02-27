@@ -7,7 +7,7 @@ export class IntegerSchema extends NumberSchema {
     super(data, opts);
   }
   validateType(data:any, path:string):any {
-    data = super.validateType(data, path)
+    data = super.validateType(data, path);
     if (parseInt(data) !== data) {
       throw new ValidationError(path, this.scope, 'type');
     }

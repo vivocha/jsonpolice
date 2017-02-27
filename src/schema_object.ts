@@ -2,12 +2,12 @@ import * as _ from 'lodash';
 import { __schema, defined, enumerableAndDefined, testRegExp, SchemaOptions, SchemaError, ValidationError } from './global';
 import { Schema } from './schema';
 
-var __salmon = Symbol();
+let __salmon = Symbol();
 
 function createDefaultProperty(schema, obj, key) {
   Object.defineProperty(obj, key, {
     get: () => {
-      var v = schema.default();
+      let v = schema.default();
       if (typeof v === 'object') {
         v[__salmon] = { obj: obj, key: key };
       }
@@ -36,7 +36,7 @@ export class ObjectSchema extends Schema {
   }
   init():void {
     super.init();
-    var i;
+    let i;
     if (enumerableAndDefined(this.data, 'properties')) {
       for (i in this.data.properties) {
         Schema.create(this.data.properties[i], _.defaults(this.opts, { scope: this.scope + '/properties/' + i }));
@@ -63,10 +63,10 @@ export class ObjectSchema extends Schema {
     }
   }
   default(data:any):any {
-    var def = super.default(data);
+    let def = super.default(data);
     if (defined(def) && def !== null && typeof def === 'object') {
       if (enumerableAndDefined(this.data, 'properties')) {
-        for (var k in this.data.properties) {
+        for (let k in this.data.properties) {
           if (!defined(def[k])) {
             createDefaultProperty(this.data.properties[k][__schema], def, k);
           }
@@ -79,13 +79,13 @@ export class ObjectSchema extends Schema {
     if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       throw new ValidationError(path, this.scope, 'type');
     }
-    var props = Object.keys(data);
+    let props = Object.keys(data);
     if (enumerableAndDefined(this.data, 'maxProperties') && props.length > this.data.maxProperties) {
       throw new ValidationError(path, this.scope, 'maxProperties');
     } else if (enumerableAndDefined(this.data, 'minProperties') && props.length < this.data.minProperties) {
       throw new ValidationError(path, this.scope, 'minProperties');
     } else {
-      var i, j, k, found;
+      let i, j, k, found;
       if (enumerableAndDefined(this.data, 'required')) {
         for (i = 0 ; i < this.data.required.length ; i++) {
           k = this.data.required[i];

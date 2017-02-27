@@ -2,7 +2,7 @@ import * as _ from 'lodash';
 import { __schema, enumerableAndDefined, SchemaOptions, SchemaError, ValidationError } from './global';
 import { Schema } from './schema';
 
-var seps = {
+let seps = {
   'csv': ',',
   'ssv': ' ',
   'tsv': '\t',
@@ -36,7 +36,7 @@ export class ArraySchema extends Schema {
   }
   validateType(data:any, path:string):any {
     if (typeof data === 'string') {
-      var sep = seps[this.data.collectionFormat || 'csv'];
+      let sep = seps[this.data.collectionFormat || 'csv'];
       if (!sep) {
         throw new SchemaError(this.scope, 'collectionFormat', this.data.collectionFormat);
       }
@@ -51,10 +51,10 @@ export class ArraySchema extends Schema {
     } else if (this.data.uniqueItems === true && _.uniqWith(data, _.isEqual).length !== data.length) {
       throw new ValidationError(path, this.scope, 'uniqueItems');
     } else if (data.length && (enumerableAndDefined(this.data, 'items') || enumerableAndDefined(this.data, 'additionalItems'))) {
-      var itemsIsArray = Array.isArray(this.data.items);
-      var itemsIsObject = !itemsIsArray && typeof this.data.items === 'object';
-      var addIsObject = typeof this.data.additionalItems === 'object';
-      for (var i = 0 ; i < data.length ; i++) {
+      let itemsIsArray = Array.isArray(this.data.items);
+      let itemsIsObject = !itemsIsArray && typeof this.data.items === 'object';
+      let addIsObject = typeof this.data.additionalItems === 'object';
+      for (let i = 0 ; i < data.length ; i++) {
         if (itemsIsArray && i < this.data.items.length) {
           data[i] = this.data.items[i][__schema].validate(data[i], path + '/' + i);
         } else if (itemsIsObject) {
