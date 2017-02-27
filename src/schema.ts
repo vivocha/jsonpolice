@@ -2,7 +2,7 @@ import * as _ from 'lodash';
 import * as refs from 'jsonref';
 import { __schema, defined, enumerableAndDefined, SchemaOptions, SchemaError, ValidationError } from './global';
 
-var __validating = Symbol();
+let __validating = Symbol();
 
 function linkProperty(o:any, i:any, k:string):void {
   o[k] = i[k];
@@ -14,7 +14,7 @@ function mergeProperties(o:any, i:any, k:string):void {
   if (o[k].allOf) {
     pushProperty(o[k].allOf, i, k);
   } else {
-    var a = [];
+    let a = [];
     pushProperty(a, o, k);
     pushProperty(a, i, k);
     o[k] = { allOf: a };
@@ -24,7 +24,7 @@ function mergeObjects(o:any, i:any, k:string):void {
   if (!enumerableAndDefined(o, k)) {
     o[k] = {};
   }
-  for (var j in i[k]) {
+  for (let j in i[k]) {
     if (!enumerableAndDefined(o[k], j)) {
       linkProperty(o[k], i[k], j);
     }
@@ -55,51 +55,6 @@ export class Schema {
 
   constructor(protected data:any, protected opts:SchemaOptions) {
     this.scope = refs.scope(data) || data.id || opts.scope || '#';
-  }
-  init():void {
-    if (enumerableAndDefined(this.data, 'allOf')) {
-      _.each(this.data.allOf, (data, i) => {
-        Schema.create(this.data.allOf[i], _.defaults(this.opts, { scope: this.scope + '/allOf/' + i }));
-      });
-    }
-    if (enumerableAndDefined(this.data, 'anyOf')) {
-      _.each(this.data.anyOf, (data, i) => {
-        Schema.create(this.data.anyOf[i], _.defaults(this.opts, { scope: this.scope + '/anyOf/' + i }));
-      });
-    }
-    if (enumerableAndDefined(this.data, 'oneOf')) {
-      _.each(this.data.oneOf, (data, i) => {
-        Schema.create(this.data.oneOf[i], _.defaults(this.opts, { scope: this.scope + '/oneOf/' + i }));
-      });
-    }
-    if (enumerableAndDefined(this.data, 'not')) {
-      Schema.create(this.data.not, _.defaults(this.opts, { scope: this.scope + '/not' }));
-    }
-  }
-  default(data:any):any {
-    var def;
-    if (defined(data)) {
-      def = data;
-    }
-    if (!defined(def) && enumerableAndDefined(this.data, 'allOf')) {
-      for (var i = 0 ; !def && i < this.data.allOf.length ; i++) {
-        def = this.data.allOf[i][__schema].default();
-      }
-    }
-    if (!defined(def) && enumerableAndDefined(this.data, 'anyOf')) {
-      for (var i = 0 ; !def && i < this.data.anyOf.length ; i++) {
-        def = this.data.anyOf[i][__schema].default();
-      }
-    }
-    if (!defined(def) && enumerableAndDefined(this.data, 'oneOf')) {
-      for (var i = 0 ; !def && i < this.data.oneOf.length ; i++) {
-        def = this.data.oneOf[i][__schema].default();
-      }
-    }
-    if (!defined(def) && enumerableAndDefined(this.data, 'default')) {
-      def = _.cloneDeep(this.data.default);
-    }
-    return def;
   }
   validate(data:any, path:string = ''):any {
     if (this[__validating]) {
@@ -136,11 +91,57 @@ export class Schema {
     delete this[__validating];
     return data;
   }
-  validateType(data:any, path:string):any {
+  protected init():void {
+    if (enumerableAndDefined(this.data, 'allOf')) {
+      _.each(this.data.allOf, (data, i) => {
+        Schema.create(this.data.allOf[i], Object.assign(this.opts, { scope: this.scope + '/allOf/' + i }));
+      });
+    }
+    if (enumerableAndDefined(this.data, 'anyOf')) {
+      _.each(this.data.anyOf, (data, i) => {
+        Schema.create(this.data.anyOf[i], Object.assign(this.opts, { scope: this.scope + '/anyOf/' + i }));
+      });
+    }
+    if (enumerableAndDefined(this.data, 'oneOf')) {
+      _.each(this.data.oneOf, (data, i) => {
+        Schema.create(this.data.oneOf[i], Object.assign(this.opts, { scope: this.scope + '/oneOf/' + i }));
+      });
+    }
+    if (enumerableAndDefined(this.data, 'not')) {
+      Schema.create(this.data.not, Object.assign(this.opts, { scope: this.scope + '/not' }));
+    }
+  }
+  protected default(data:any):any {
+    let def;
+    if (defined(data)) {
+      def = data;
+    }
+    if (!defined(def) && enumerableAndDefined(this.data, 'allOf')) {
+      for (let i = 0 ; !def && i < this.data.allOf.length ; i++) {
+        def = this.data.allOf[i][__schema].default();
+      }
+    }
+    if (!defined(def) && enumerableAndDefined(this.data, 'anyOf')) {
+      for (let i = 0 ; !def && i < this.data.anyOf.length ; i++) {
+        def = this.data.anyOf[i][__schema].default();
+      }
+    }
+    if (!defined(def) && enumerableAndDefined(this.data, 'oneOf')) {
+      for (let i = 0 ; !def && i < this.data.oneOf.length ; i++) {
+        def = this.data.oneOf[i][__schema].default();
+      }
+    }
+    if (!defined(def) && enumerableAndDefined(this.data, 'default')) {
+      def = _.cloneDeep(this.data.default);
+    }
+    return def;
+  }
+  protected validateType(data:any, path:string):any {
     throw new SchemaError(this.scope, 'type', data.type);
   }
-  validateEnum(data:any, path:string):any {
-    for (var i = 0, found = false ; !found && i < this.data.enum.length ; i++) {
+  protected validateEnum(data:any, path:string):any {
+    let found = false;
+    for (let i = 0 ; !found && i < this.data.enum.length ; i++) {
       found = _.isEqual(data, this.data.enum[i]);
     }
     if (!found) {
@@ -148,14 +149,15 @@ export class Schema {
     }
     return data;
   }
-  validateAllOf(data:any, path:string):any {
-    for (var i = 0 ; i < this.data.allOf.length ; i++) {
+  protected validateAllOf(data:any, path:string):any {
+    for (let i = 0 ; i < this.data.allOf.length ; i++) {
       data = this.data.allOf[i][__schema].validate(data, path);
     }
     return data;
   }
-  validateAnyOf(data:any, path:string):any {
-    for (var i = 0, found = false, _data ; !found && i < this.data.anyOf.length ; i++) {
+  protected validateAnyOf(data:any, path:string):any {
+    let found = false, _data;
+    for (let i = 0 ; !found && i < this.data.anyOf.length ; i++) {
       try {
         _data = this.data.anyOf[i][__schema].validate(data, path);
         found = true;
@@ -166,8 +168,9 @@ export class Schema {
     }
     return _data;
   }
-  validateOneOf(data:any, path:string):any {
-    for (var i = 0, count = 0, _data ; count < 2 && i < this.data.oneOf.length ; i++) {
+  protected validateOneOf(data:any, path:string):any {
+    let count = 0, _data;
+    for (let i = 0 ; count < 2 && i < this.data.oneOf.length ; i++) {
       try {
         _data = this.data.oneOf[i][__schema].validate(data, path);
         count++;
@@ -178,7 +181,7 @@ export class Schema {
     }
     return _data;
   }
-  validateNot(data:any, path:string):any {
+  protected validateNot(data:any, path:string):any {
     try {
       this.data.not[__schema].validate(data, path);
     } catch(e) {
@@ -194,16 +197,16 @@ export class Schema {
     Schema.factories[type] = factory;
   }
   static create(data:any, opts:SchemaOptions = {}):Schema {
-    var schema;
+    let schema;
     if (defined(data)) {
       if (data[__schema] instanceof Schema) {
         return data[__schema];
       } else {
         if (defined(data.type)) {
           if (Array.isArray(data.type)) {
-            var _data = { anyOf: [ ] };
+            let _data = { anyOf: [ ] };
             _.each(data.type, function(type) {
-              var _type = _.clone(data);
+              let _type = _.clone(data);
               _type.type = type;
               _data.anyOf.push(_type);
             });
@@ -228,7 +231,7 @@ export class Schema {
     if (!enumerableAndDefined(data, 'allOf')) {
       return data;
     } else {
-      var out:any = {};
+      let out:any = {};
       // Init the data that must be taken from the outer schema
       if (enumerableAndDefined(data, 'id')) out.id = data.id;
       if (enumerableAndDefined(data, '$schema')) out.$schema = data.$schema;
@@ -307,10 +310,10 @@ export class Schema {
           if (!enumerableAndDefined(o, 'dependencies')) {
             o.dependencies = {};
           }
-          for (var k in i.dependencies) {
+          for (let k in i.dependencies) {
             if (enumerableAndDefined(o.dependencies, k)) {
-              var _o = o.dependencies;
-              var _i = i.dependencies;
+              let _o = o.dependencies;
+              let _i = i.dependencies;
               if (Array.isArray(_o[k]) && Array.isArray(_i[k])) {
                 _o[k] = _.uniq(_o[k].concat(_i[k]));
               } else {
