@@ -13,7 +13,7 @@ import './schema_string';
 
 export { Schema } from './schema';
 
-export function create(dataOrUri:any, opts:SchemaOptions = {}) {
+export function create(dataOrUri:any, opts:SchemaOptions = {}): Promise<Schema> {
   if (!dataOrUri) {
     throw new SchemaError(opts.scope, 'no_data');
   }
@@ -26,7 +26,7 @@ export function create(dataOrUri:any, opts:SchemaOptions = {}) {
       _.defaults(opts.store, versions);
       return refs.parse(dataOrUri, opts).then(function(data) {
         return vers.get(data.$schema, opts).then(function(schemaVersion) {
-          var _schemaVersion = Schema.create(schemaVersion, _.defaults(opts, { scope: refs.scope(schemaVersion) }));
+          let _schemaVersion = Schema.create(schemaVersion, _.defaults(opts, { scope: refs.scope(schemaVersion) }));
           _schemaVersion.validate(data);
           return Schema.create(data, opts);
         });
@@ -36,17 +36,17 @@ export function create(dataOrUri:any, opts:SchemaOptions = {}) {
 }
 export function flatten(dataOrUri:any, opts:SchemaOptions = {}) {
   return create(dataOrUri, opts).then(function(schema) {
-    return Schema.flatten(schema.data);
+    return Schema.flatten((schema as any).data);
   });
 }
-export function getVersion(dataOrUri:any, opts:SchemaOptions = {}) {
+export function getVersion(dataOrUri:any, opts:SchemaOptions = {}): Promise<any> {
   return vers.get(dataOrUri, opts);
 }
-export function addVersion(dataOrUri:any, opts:SchemaOptions = {}) {
+export function addVersion(dataOrUri:any, opts:SchemaOptions = {}): Promise<any> {
   return vers.parseKnown().then(function() {
     return vers.add(dataOrUri, opts);
   });
 }
-export function fireValidationError(dataScope:string, schemaScope:string, type:string, info?:any) {
+export function fireValidationError(dataScope:string, schemaScope:string, type:string, info?:any): never {
   throw new ValidationError(dataScope, schemaScope, type, info);
 }

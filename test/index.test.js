@@ -87,7 +87,6 @@ describe('jsonpolice', function() {
           a: { type: 'number'}
         }
       }).then(function(s) {
-        console.log(s, s.data.additionalProperties, s.data.additionalProperties.validate);
         should.not.throw(function () {
           s.validate({ a: 1, b: false });
         });
