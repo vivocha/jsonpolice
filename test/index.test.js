@@ -183,16 +183,6 @@ describe('jsonpolice', function() {
 
   });
 
-  describe('fireValidationError', function() {
-
-    it('should fire a ValidationError', function() {
-      should.throw(function() {
-        jp.fireValidationError('a', 'b', 'c');
-      }, jp.ValidationError, 'c');
-    });
-
-  });
-
   describe('compliance', function() {
 
     it('should create a validator of the JSON-Schema specification', function() {
