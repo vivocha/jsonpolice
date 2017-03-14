@@ -59,7 +59,7 @@
     }
   },
   "dependencies": {
-    "jsonref": "^3.4.0",
+    "jsonref": "^3.5.0",
     "lodash": "^4.5.1"
   }
 }

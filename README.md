@@ -19,8 +19,7 @@ $ npm install jsonpolice
 
 ## create(dataOrUri _[, options]_)
 
-Create a new instance of schema validator. The schema itself is validated against the version of the specification
-the schema uses, as specified with the `$schema` property (defaults to `http://json-schema.org/draft-04/schema#`).
+Create a new instance of schema validator.
 
 * `dataOrUri`, the schema to parse or a fully qualified URI to pass to `retriever` to download the schema
 * `options` (optional), parsing options, the following optional properties are supported:
@@ -69,60 +68,6 @@ jsonpolice.create({
     i: 6,
     b: true
   }));
-});
-```
-
-## addVersion(dataOrUri _[, options]_)
-
-Register a new version of the specification that can be later used to validate schemas against. You can use this
-function to register custom extensions to the basic JSON Schema specification
-
-* `dataOrUri`, the data to parse or a fully qualified URI to pass to `retriever` to download the data
-* `options` (optional), parsing options, the following optional properties are supported:
-  * `scope`, the current resolution scope (base href) of URLs and paths.
-  * `retriever`, a function accepting a URL in input and returning a promise resolved to an object
-representing the data downloaded for the URI. Whenever a `$ref` to a new URI is found, if the URI is not
-already cached in the store in use, it'll be fetched using this `retriever`. If not `retriever` is passed
-and a URI needs to be downloaded, a `no_retriever` exception is thrown.
- * `removeAdditional`, see the description of the parameter with the same name in the `create` function above.
-
-The function returns a Promise resolving to the parsed data, with all `$ref` instances resolved.
-
-### Example
-
-```javascript
-var jsonpolice = require('jsonpolice');
-
-jsonpolice.addVersion({
-  id: 'http://vivocha.com/sampleSwaggerParameter#',
-  allOf: [
-    { $ref: 'http://json-schema.org/draft-04/schema#' },
-    {
-      type: 'object',
-      properties: {
-        collectionFormat: {
-          enum: [ 'csv', 'ssv', 'tsv', 'pipes' ],
-          default: 'csv'
-        }
-      }
-    }
-  ]
-}).then(function() {
-  jsonpolice.create({
-    $schema: 'http://vivocha.com/sampleSwaggerParameter#',
-    type: 'object',
-    properties: {
-      a: {
-        type: 'array',
-        collectionFormat: 'ssv',
-        items: {
-          type: 'integer'
-        }
-      }
-    }
-  }).then(function(schema) {
-    console.log(schema.validate({ a: "5 10 15" }));
-  });
 });
 ```
 

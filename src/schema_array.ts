@@ -18,17 +18,17 @@ export class ArraySchema extends Schema {
     if (enumerableAndDefined(this.data, 'items')) {
       if (Array.isArray(this.data.items)) {
         _.each(this.data.items, (data, i) => {
-          Schema.create(this.data.items[i], _.defaults(this.opts, { scope: this.scope + '/items/' + i }));
+          Schema.create(this.data.items[i], Object.assign({}, this.opts, { scope: this.scope + '/items/' + i }));
         });
       } else if (typeof this.data.items === 'object') {
-        Schema.create(this.data.items, _.defaults(this.opts, { scope: this.scope + '/items' }));
+        Schema.create(this.data.items, Object.assign({}, this.opts, { scope: this.scope + '/items' }));
       } else {
         throw new SchemaError(this.scope, 'items', this.data.items);
       }
     }
     if (enumerableAndDefined(this.data, 'additionalItems')) {
       if (typeof this.data.additionalItems === 'object') {
-        Schema.create(this.data.additionalItems, _.defaults(this.opts, { scope: this.scope + '/additionalItems' }));
+        Schema.create(this.data.additionalItems, Object.assign({}, this.opts, { scope: this.scope + '/additionalItems' }));
       } else if (typeof this.data.additionalItems !== 'boolean') {
         throw new SchemaError(this.scope, 'additionalItems', this.data.additionalItems);
       }

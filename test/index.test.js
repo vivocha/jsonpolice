@@ -4,7 +4,6 @@ var chai = require('chai')
   , should = chai.should()
   , jp = require('../dist/index')
   , global = require('../dist/global')
-  , versions = require('../dist/versions')
 
 chai.use(spies);
 chai.use(chaiAsPromised);
@@ -25,9 +24,7 @@ describe('jsonpolice', function() {
         should.exist(s);
         should.exist(s.opts);
         should.exist(s.opts.store);
-        should.exist(s.opts.store['#']);
         data[global.__schema].should.equal(s);
-        s.opts.store['#'].should.equal(data);
       });
     });
 
@@ -89,6 +86,28 @@ describe('jsonpolice', function() {
       }).then(function(s) {
         should.not.throw(function () {
           s.validate({ a: 1, b: false });
+        });
+      });
+    });
+
+    it('should throw if a recursive additional property if of the wrong type', function() {
+      let opts = {};
+      return jp.create({
+        type: 'object',
+        properties: {
+          a: {
+            type: 'integer'
+          },
+        },
+        additionalProperties: { $ref: '#' }
+      }, opts).then(function(s) {
+        s.data.additionalProperties.should.equal(s.data);
+        Object.keys(opts.store).should.have.length(0);
+        should.throw(function() {
+          s.validate({ a: 1, b: true });
+        }, global.ValidationError, 'type');
+        should.not.throw(function() {
+          s.validate({ a: 1, b: { a: 5 } });
         });
       });
     });
@@ -164,42 +183,187 @@ describe('jsonpolice', function() {
 
   });
 
-  describe('getVersion', function() {
-
-    it('should get the default spec version', function() {
-      var id = 'http://json-schema.org/draft-04/schema#';
-      return jp.getVersion(id).then(function(s) {
-        s.id.should.equal(id);
-      });
-    });
-
-  });
-
-  describe('addVersion', function() {
-
-    afterEach(function() {
-      versions.reset();
-    });
-
-    it('should allow adding a new spec version', function() {
-      return jp.addVersion({
-        id: 'test',
-        type: 'number'
-      }).then(function(s1) {
-        return jp.getVersion('test').then(function(s2) {
-          s2.should.equal(s1);
-        });
-      });
-    });
-
-  });
-
   describe('fireValidationError', function() {
 
     it('should fire a ValidationError', function() {
       should.throw(function() {
         jp.fireValidationError('a', 'b', 'c');
       }, jp.ValidationError, 'c');
+    });
+
+  });
+
+  describe('compliance', function() {
+
+    it('should create a validator of the JSON-Schema specification', function() {
+      let spec = {
+        "id": "http://json-schema.org/draft-04/schema#",
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "Core schema meta-schema",
+        "definitions": {
+          "schemaArray": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#" }
+          },
+          "positiveInteger": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "positiveIntegerDefault0": {
+            "allOf": [ { "$ref": "#/definitions/positiveInteger" }, { "default": 0 } ]
+          },
+          "simpleTypes": {
+            "enum": [ "array", "boolean", "integer", "null", "number", "object", "string" ]
+          },
+          "stringArray": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uri"
+          },
+          "$schema": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "default": {},
+          "multipleOf": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "maximum": {
+            "type": "number"
+          },
+          "exclusiveMaximum": {
+            "type": "boolean",
+            "default": false
+          },
+          "minimum": {
+            "type": "number"
+          },
+          "exclusiveMinimum": {
+            "type": "boolean",
+            "default": false
+          },
+          "maxLength": { "$ref": "#/definitions/positiveInteger" },
+          "minLength": { "$ref": "#/definitions/positiveIntegerDefault0" },
+          "pattern": {
+            "type": "string",
+            "format": "regex"
+          },
+          "additionalItems": {
+            "anyOf": [
+              { "type": "boolean" },
+              { "$ref": "#" }
+            ],
+            "default": {}
+          },
+          "items": {
+            "anyOf": [
+              { "$ref": "#" },
+              { "$ref": "#/definitions/schemaArray" }
+            ],
+            "default": {}
+          },
+          "maxItems": { "$ref": "#/definitions/positiveInteger" },
+          "minItems": { "$ref": "#/definitions/positiveIntegerDefault0" },
+          "uniqueItems": {
+            "type": "boolean",
+            "default": false
+          },
+          "maxProperties": { "$ref": "#/definitions/positiveInteger" },
+          "minProperties": { "$ref": "#/definitions/positiveIntegerDefault0" },
+          "required": { "$ref": "#/definitions/stringArray" },
+          "additionalProperties": {
+            "anyOf": [
+              { "type": "boolean" },
+              { "$ref": "#" }
+            ],
+            "default": {}
+          },
+          "definitions": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#" },
+            "default": {}
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#" },
+            "default": {}
+          },
+          "patternProperties": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#" },
+            "default": {}
+          },
+          "dependencies": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                { "$ref": "#" },
+                { "$ref": "#/definitions/stringArray" }
+              ]
+            }
+          },
+          "enum": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "type": {
+            "anyOf": [
+              { "$ref": "#/definitions/simpleTypes" },
+              {
+                "type": "array",
+                "items": { "$ref": "#/definitions/simpleTypes" },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            ]
+          },
+          "allOf": { "$ref": "#/definitions/schemaArray" },
+          "anyOf": { "$ref": "#/definitions/schemaArray" },
+          "oneOf": { "$ref": "#/definitions/schemaArray" },
+          "not": { "$ref": "#" }
+        },
+        "dependencies": {
+          "exclusiveMaximum": [ "maximum" ],
+          "exclusiveMinimum": [ "minimum" ]
+        },
+        "default": {}
+      }
+      let opts = {};
+      return jp.create(spec, opts).then(schema => {
+        opts.store['http://json-schema.org/draft-04/schema#'].should.equal(schema.data);
+        should.throw(function() {
+          schema.validate({ type: true });
+        }, jp.ValidationError, 'anyOf');
+        should.not.throw(function() {
+          schema.validate({
+            type: 'object',
+            properties: {
+              a: {
+                type: 'integer'
+              },
+            },
+            additionalProperties: { $ref: '#' }
+          });
+        });
+      });
     });
 
   });

@@ -2,8 +2,6 @@ import * as _ from 'lodash';
 import * as refs from 'jsonref';
 import { __schema, defined, enumerableAndDefined, SchemaOptions, SchemaError, ValidationError } from './global';
 
-let __validating = Symbol();
-
 function linkProperty(o:any, i:any, k:string):void {
   o[k] = i[k];
 }
@@ -57,61 +55,50 @@ export class Schema {
     this.scope = refs.scope(data) || data.id || opts.scope || '#';
   }
   validate(data:any, path:string = ''):any {
-    if (this[__validating]) {
-      return data;
-    } else {
-      this[__validating] = true;
-    }
     data = this.default(data);
     if (typeof data !== 'undefined') {
-      try {
-        if (enumerableAndDefined(this.data, 'type')) {
-          data = this.validateType(data, path);
-        }
-        if (enumerableAndDefined(this.data, 'enum')) {
-          data = this.validateEnum(data, path);
-        }
-        if (enumerableAndDefined(this.data, 'allOf')) {
-          data = this.validateAllOf(data, path);
-        }
-        if (enumerableAndDefined(this.data, 'anyOf')) {
-          data = this.validateAnyOf(data, path);
-        }
-        if (enumerableAndDefined(this.data, 'oneOf')) {
-          data = this.validateOneOf(data, path);
-        }
-        if (enumerableAndDefined(this.data, 'not')) {
-          data = this.validateNot(data, path);
-        }
-      } catch(e) {
-        delete this[__validating];
-        throw e;
+      if (enumerableAndDefined(this.data, 'type')) {
+        data = this.validateType(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'enum')) {
+        data = this.validateEnum(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'allOf')) {
+        data = this.validateAllOf(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'anyOf')) {
+        data = this.validateAnyOf(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'oneOf')) {
+        data = this.validateOneOf(data, path);
+      }
+      if (enumerableAndDefined(this.data, 'not')) {
+        data = this.validateNot(data, path);
       }
     }
-    delete this[__validating];
     return data;
   }
   protected init():void {
     if (enumerableAndDefined(this.data, 'allOf')) {
       _.each(this.data.allOf, (data, i) => {
-        Schema.create(this.data.allOf[i], Object.assign(this.opts, { scope: this.scope + '/allOf/' + i }));
+        Schema.create(this.data.allOf[i], Object.assign({}, this.opts, { scope: this.scope + '/allOf/' + i }));
       });
     }
     if (enumerableAndDefined(this.data, 'anyOf')) {
       _.each(this.data.anyOf, (data, i) => {
-        Schema.create(this.data.anyOf[i], Object.assign(this.opts, { scope: this.scope + '/anyOf/' + i }));
+        Schema.create(this.data.anyOf[i], Object.assign({}, this.opts, { scope: this.scope + '/anyOf/' + i }));
       });
     }
     if (enumerableAndDefined(this.data, 'oneOf')) {
       _.each(this.data.oneOf, (data, i) => {
-        Schema.create(this.data.oneOf[i], Object.assign(this.opts, { scope: this.scope + '/oneOf/' + i }));
+        Schema.create(this.data.oneOf[i], Object.assign({}, this.opts, { scope: this.scope + '/oneOf/' + i }));
       });
     }
     if (enumerableAndDefined(this.data, 'not')) {
-      Schema.create(this.data.not, Object.assign(this.opts, { scope: this.scope + '/not' }));
+      Schema.create(this.data.not, Object.assign({}, this.opts, { scope: this.scope + '/not' }));
     }
   }
-  protected default(data:any):any {
+  protected default(data: any): any {
     let def;
     if (defined(data)) {
       def = data;

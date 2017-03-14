@@ -39,17 +39,17 @@ export class ObjectSchema extends Schema {
     let i;
     if (enumerableAndDefined(this.data, 'properties')) {
       for (i in this.data.properties) {
-        Schema.create(this.data.properties[i], _.defaults(this.opts, { scope: this.scope + '/properties/' + i }));
+        Schema.create(this.data.properties[i], Object.assign({}, this.opts, { scope: this.scope + '/properties/' + i }));
       }
     }
     if (enumerableAndDefined(this.data, 'patternProperties')) {
       for (i in this.data.patternProperties) {
-        Schema.create(this.data.patternProperties[i], _.defaults(this.opts, { scope: this.scope + '/patternProperties/' + i }));
+        Schema.create(this.data.patternProperties[i], Object.assign({}, this.opts, { scope: this.scope + '/patternProperties/' + i }));
       }
     }
     if (enumerableAndDefined(this.data, 'additionalProperties')) {
       if (typeof this.data.additionalProperties === 'object') {
-        Schema.create(this.data.additionalProperties, _.defaults(this.opts, { scope: this.scope + '/additionalProperties' }));
+        Schema.create(this.data.additionalProperties, Object.assign({}, this.opts, { scope: this.scope + '/additionalProperties' }));
       } else if (typeof this.data.additionalProperties !== 'boolean') {
         throw new SchemaError(this.scope, 'additionalProperties', this.data.additionalProperties);
       }
@@ -57,7 +57,7 @@ export class ObjectSchema extends Schema {
     if (enumerableAndDefined(this.data, 'dependencies')) {
       for (i in this.data.dependencies) {
         if (typeof this.data.dependencies[i] === 'object' && !Array.isArray(this.data.dependencies[i])) {
-          Schema.create(this.data.dependencies[i], _.defaults(this.opts, { scope: this.scope + '/dependencies/' + i }));
+          Schema.create(this.data.dependencies[i], Object.assign({}, this.opts, { scope: this.scope + '/dependencies/' + i }));
         }
       }
     }
@@ -131,10 +131,7 @@ export class ObjectSchema extends Schema {
                 throw new ValidationError(path + '/' + k, this.scope, 'property');
               }
             } else if (typeof this.data.additionalProperties === 'object') {
-              let s = this.data.additionalProperties[__schema];
-              if (s) {
-                s.validate(data[k], path + '/' + k);
-              }
+              this.data.additionalProperties[__schema].validate(data[k], path + '/' + k);
             }
           }
         }
