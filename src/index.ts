@@ -10,6 +10,7 @@ import './schema_object';
 import './schema_string';
 
 export { Schema } from './schema';
+export { SchemaError, ValidationError, SchemaOptions } from './global';
 
 export function create(dataOrUri:any, opts:SchemaOptions = {}): Promise<Schema> {
   if (!dataOrUri) {
