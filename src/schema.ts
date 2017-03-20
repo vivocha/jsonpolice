@@ -49,7 +49,7 @@ export interface SchemaFactory {
 }
 
 export class Schema {
-  protected scope:string;
+  readonly scope:string;
 
   constructor(protected data:any, protected opts:SchemaOptions) {
     this.scope = refs.scope(data) || data.id || opts.scope || '#';
