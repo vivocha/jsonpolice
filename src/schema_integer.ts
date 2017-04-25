@@ -6,8 +6,8 @@ export class IntegerSchema extends NumberSchema {
   constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data:any, path:string):any {
-    data = super.validateType(data, path);
+  async validateType(data:any, path:string): Promise<any> {
+    data = await super.validateType(data, path);
     if (parseInt(data) !== data) {
       throw new ValidationError(path, this.scope, 'type');
     }

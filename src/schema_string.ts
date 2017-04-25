@@ -1,11 +1,11 @@
 import { defined, enumerableAndDefined, regexps, testRegExp, SchemaOptions, ValidationError } from './global';
-import { Schema } from './schema';
+import { Schema, UntypedSchema } from './schema';
 
-export class StringSchema extends Schema {
+export class StringSchema extends UntypedSchema {
   constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data:any, path:string):any {
+  async validateType(data:any, path:string): Promise<any> {
     if (this.data.format === 'date-time') {
       if (!(data instanceof Date)) {
         if (typeof data !== 'string') {

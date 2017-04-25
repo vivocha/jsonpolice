@@ -1,4 +1,4 @@
-var chai = require('chai')
+const chai = require('chai')
   , spies = require('chai-spies')
   , should = chai.should()
   , global = require('../dist/global')
@@ -10,29 +10,33 @@ describe('BooleanSchema', function() {
 
   describe('validate', function() {
 
-    var s = new BooleanSchema({
+    let s = new BooleanSchema({
       type: 'boolean'
     }, {});
 
     it('should throw if not a boolean', function() {
-      should.throw(function() {
-        s.validate('ciao');
-      }, global.ValidationError, 'type');
+      return s.validate('ciao').should.be.rejectedWith(global.ValidationError, 'type');
     });
 
     it('should validate a \'true\' and \'1\' as true', function() {
-      s.validate('true').should.equal(true);
-      s.validate('1').should.equal(true);
+      return Promise.all([
+        s.validate('true').should.eventually.equal(true),
+        s.validate('1').should.eventually.equal(true)
+      ]);
     });
 
     it('should validate a \'false\' and \'0\' as false', function() {
-      s.validate('false').should.equal(false);
-      s.validate('0').should.equal(false);
+      return Promise.all([
+        s.validate('false').should.eventually.equal(false),
+        s.validate('0').should.eventually.equal(false)
+      ]);
     });
 
     it('should validate a boolean', function() {
-      s.validate(true).should.equal(true);
-      s.validate(false).should.equal(false);
+      return Promise.all([
+        s.validate(true).should.eventually.equal(true),
+        s.validate(false).should.eventually.equal(false)
+      ]);
     });
   });
 

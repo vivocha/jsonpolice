@@ -1,4 +1,4 @@
-var chai = require('chai')
+const chai = require('chai')
   , spies = require('chai-spies')
   , should = chai.should()
   , global = require('../dist/global')
@@ -10,49 +10,39 @@ describe('ArraySchema', function() {
 
   describe('validate', function() {
 
-    var s = new ArraySchema({
+    let  s = new ArraySchema({
       type: 'array',
       minItems: 3,
       maxItems: 6,
       uniqueItems: true
     }, {});
 
-    it('should throw if not an array and not a string', function() {
-      should.throw(function() {
-        s.validate(1);
-      }, global.ValidationError, 'type');
+    it('should reject if not an array and not a string', function() {
+      return s.validate(1).should.be.rejectedWith(global.ValidationError, 'type');
     });
 
-    it('should throw if data is a string and collectionFormat is unsupported', function() {
-      var s = new ArraySchema({
+    it('should reject if data is a string and collectionFormat is unsupported', function() {
+      let  s = new ArraySchema({
         type: 'array',
         collectionFormat: 'aaa'
       }, {});
-      should.throw(function() {
-        s.validate('a');
-      }, global.SchemaError, 'collectionFormat');
+      return s.validate('a').should.be.rejectedWith(global.SchemaError, 'collectionFormat');
     });
 
-    it('should throw if minItems not fulfilled', function() {
-      should.throw(function() {
-        s.validate([ 1, 2 ]);
-      }, global.ValidationError, 'minItems');
+    it('should reject if minItems not fulfilled', function() {
+      return s.validate([ 1, 2 ]).should.be.rejectedWith(global.ValidationError, 'minItems');
     });
 
-    it('should throw if maxItems not fulfilled', function() {
-      should.throw(function() {
-        s.validate([ 1, 1, 1, 1, 1, 1, 1 ]);
-      }, global.ValidationError, 'maxItems');
+    it('should reject if maxItems not fulfilled', function() {
+      return s.validate([ 1, 1, 1, 1, 1, 1, 1 ]).should.be.rejectedWith(global.ValidationError, 'maxItems');
     });
 
-    it('should throw if exclusive uniqueItems not fulfilled', function() {
-      should.throw(function() {
-        s.validate([ 1, 1, 1, 1, 1 ]);
-      }, global.ValidationError, 'uniqueItems');
+    it('should reject if exclusive uniqueItems not fulfilled', function() {
+      return s.validate([ 1, 1, 1, 1, 1 ]).should.be.rejectedWith(global.ValidationError, 'uniqueItems');
     });
 
-    it('should throw if the items don\'t match a list of schemas', function() {
-      var s = new ArraySchema({
+    it('should reject if the items don\'t match a list of schemas', function() {
+      let  s = new ArraySchema({
         type: 'array',
         minItems: 3,
         maxItems: 6,
@@ -64,19 +54,15 @@ describe('ArraySchema', function() {
         ]
       }, {});
       s.init();
-      should.throw(function() {
-        s.validate([ 1, 2, 3, 4 ]);
-      }, global.ValidationError);
-      should.throw(function() {
-        s.validate([ '1', 2, 3, 4 ]);
-      }, global.ValidationError);
-      should.not.throw(function() {
-        s.validate([ '1', 2, true, 4 ]);
-      }, global.ValidationError);
+      return Promise.all([
+        s.validate([ 1, 2, 3, 4 ]).should.be.rejectedWith(global.ValidationError),
+        s.validate([ '1', 2, 3, 4 ]).should.be.rejectedWith(global.ValidationError),
+        s.validate([ '1', 2, true, 4 ]).should.be.fulfilled
+      ]);
     });
 
-    it('should throw if the items exceed a list of specified items and additionalItems is false', function() {
-      var s = new ArraySchema({
+    it('should reject if the items exceed a list of specified items and additionalItems is false', function() {
+      let  s = new ArraySchema({
         type: 'array',
         minItems: 3,
         maxItems: 6,
@@ -89,13 +75,11 @@ describe('ArraySchema', function() {
         additionalItems: false
       }, {});
       s.init();
-      should.throw(function() {
-        s.validate([ '1', 2, true, 4 ]);
-      }, global.ValidationError);
+      return s.validate([ '1', 2, true, 4 ]).should.be.rejectedWith(global.ValidationError);
     });
 
-    it('should throw if the items exceed a list of specified items and do not validate additionalItems', function() {
-      var s = new ArraySchema({
+    it('should reject if the items exceed a list of specified items and do not validate additionalItems', function() {
+      let  s = new ArraySchema({
         type: 'array',
         minItems: 3,
         maxItems: 6,
@@ -108,16 +92,14 @@ describe('ArraySchema', function() {
         additionalItems: { type: 'null' }
       }, {});
       s.init();
-      should.throw(function() {
-        s.validate([ '1', 2, true, 4 ]);
-      }, global.ValidationError);
-      should.not.throw(function() {
-        s.validate([ '1', 2, true, null ]);
-      }, global.ValidationError);
+      return Promise.all([
+        s.validate([ '1', 2, true, 4 ]).should.be.rejectedWith(global.ValidationError),
+        s.validate([ '1', 2, true, null ]).should.be.fulfilled
+      ]);
     });
 
-    it('should throw if the items do not validate items', function() {
-      var s = new ArraySchema({
+    it('should reject if the items do not validate items', function() {
+      let  s = new ArraySchema({
         type: 'array',
         minItems: 3,
         maxItems: 6,
@@ -125,16 +107,14 @@ describe('ArraySchema', function() {
         items: { type: 'string' }
       }, {});
       s.init();
-      should.throw(function() {
-        s.validate([ '1', 2, true ]);
-      }, global.ValidationError);
-      should.not.throw(function() {
-        s.validate([ '1', '2', 'true' ]);
-      }, global.ValidationError);
+      return Promise.all([
+        s.validate([ '1', 2, true ]).should.be.rejectedWith(global.ValidationError),
+        s.validate([ '1', '2', 'true' ]).should.be.fulfilled
+      ]);
     });
 
-    it('should throw if items is neither an array nor an object', function() {
-      var s = new ArraySchema({
+    it('should reject if items is neither an array nor an object', function() {
+      let  s = new ArraySchema({
         type: 'array',
         minItems: 3,
         maxItems: 6,
@@ -146,8 +126,8 @@ describe('ArraySchema', function() {
       }, global.SchemaError, 'items');
     });
 
-    it('should throw if additionalItems is neither an object nor a boolean', function() {
-      var s = new ArraySchema({
+    it('should reject if additionalItems is neither an object nor a boolean', function() {
+      let  s = new ArraySchema({
         type: 'array',
         minItems: 3,
         maxItems: 6,
@@ -160,14 +140,12 @@ describe('ArraySchema', function() {
     });
 
     it('should successfully validate an array fulfilling all the criteria', function() {
-      var a = [ 'a', 'b', 'c' ];
-      s.validate(a).should.equal(a);
+      let  a = [ 'a', 'b', 'c' ];
+      return s.validate(a).should.eventually.deep.equal(a);
     });
 
     it('should successfully validate an array represented as string fulfilling all the criteria', function() {
-      var a = s.validate('a,b,c');
-      a.should.be.a.instanceOf(Array);
-      a.should.have.length(3);
+      return s.validate('a,b,c').should.eventually.have.length(3);
     });
 
   });

@@ -1,8 +1,9 @@
-var chai = require('chai')
+const chai = require('chai')
   , spies = require('chai-spies')
   , should = chai.should()
   , global = require('../dist/global')
   , Schema = require('../dist/schema').Schema
+  , UntypedSchema = require('../dist/schema').UntypedSchema
   , util = require('util')
 
 chai.use(spies);
@@ -18,8 +19,8 @@ describe('Schema', function() {
     });
 
     it('should create a Schema when called with an empty object', function() {
-      var data = {};
-      var s = Schema.create(data);
+      let data = {};
+      let s = Schema.create(data);
       should.exist(s);
       should.exist(s.opts);
       should.exist(data[global.__schema]);
@@ -27,10 +28,10 @@ describe('Schema', function() {
     });
 
     it('should return the passed data when creating a schema from data already used to create a schema', function() {
-      var data = {};
-      var s1 = Schema.create(data);
+      let data = {};
+      let s1 = Schema.create(data);
       should.exist(s1);
-      var s2 = Schema.create(data);
+      let s2 = Schema.create(data);
       should.exist(s2);
       s1.should.equal(s2);
     });
@@ -42,7 +43,7 @@ describe('Schema', function() {
     });
 
     it('should create a ArraySchema when called with type array', function() {
-      var s = Schema.create({ type: 'array' });
+      let s = Schema.create({ type: 'array' });
       should.exist(s);
       s.should.be.a.instanceOf(Schema);
       s.should.be.a.instanceOf(Schema.factories['array']);
@@ -55,7 +56,7 @@ describe('Schema', function() {
     });
 
     it('should create a BooleanSchema when called with type boolean', function() {
-      var s = Schema.create({ type: 'boolean' });
+      let s = Schema.create({ type: 'boolean' });
       should.exist(s);
       s.should.be.a.instanceOf(Schema);
       s.should.not.be.a.instanceOf(Schema.factories['array']);
@@ -68,7 +69,7 @@ describe('Schema', function() {
     });
 
     it('should create a IntegerSchema when called with type integer', function() {
-      var s = Schema.create({ type: 'integer' });
+      let s = Schema.create({ type: 'integer' });
       should.exist(s);
       s.should.be.a.instanceOf(Schema);
       s.should.not.be.a.instanceOf(Schema.factories['array']);
@@ -81,7 +82,7 @@ describe('Schema', function() {
     });
 
     it('should create a NullSchema when called with type null', function() {
-      var s = Schema.create({ type: 'null' });
+      let s = Schema.create({ type: 'null' });
       should.exist(s);
       s.should.be.a.instanceOf(Schema);
       s.should.not.be.a.instanceOf(Schema.factories['array']);
@@ -94,7 +95,7 @@ describe('Schema', function() {
     });
 
     it('should create a NumberSchema when called with type number', function() {
-      var s = Schema.create({ type: 'number' });
+      let s = Schema.create({ type: 'number' });
       should.exist(s);
       s.should.be.a.instanceOf(Schema);
       s.should.not.be.a.instanceOf(Schema.factories['array']);
@@ -107,7 +108,7 @@ describe('Schema', function() {
     });
 
     it('should create a ObjectSchema when called with type object', function() {
-      var s = Schema.create({ type: 'object' });
+      let s = Schema.create({ type: 'object' });
       should.exist(s);
       s.should.be.a.instanceOf(Schema);
       s.should.not.be.a.instanceOf(Schema.factories['array']);
@@ -120,7 +121,7 @@ describe('Schema', function() {
     });
 
     it('should create a StringSchema when called with type string', function() {
-      var s = Schema.create({ type: 'string' });
+      let s = Schema.create({ type: 'string' });
       should.exist(s);
       s.should.be.a.instanceOf(Schema);
       s.should.not.be.a.instanceOf(Schema.factories['array']);
@@ -133,7 +134,7 @@ describe('Schema', function() {
     });
 
     it('should create a Schema with anyOf when called with an array of valid types', function() {
-      var s = Schema.create({ type: [ 'object', 'string' ] });
+      let s = Schema.create({ type: [ 'object', 'string' ] });
       should.exist(s);
       should.exist(s.data);
       should.exist(s.data.anyOf);
@@ -158,7 +159,7 @@ describe('Schema', function() {
         }
       }
       Schema.registerFactory('test', CustomType);
-      var s = Schema.create({type: 'test'});
+      let s = Schema.create({type: 'test'});
       should.exist(s);
       s.should.be.a.instanceOf(Schema);
       s.should.be.a.instanceOf(CustomType);
@@ -173,23 +174,23 @@ describe('Schema', function() {
     });
 
     it('should do nothing when called with data not containing an allOf', function () {
-      var a = {};
-      var b = Schema.flatten(a);
+      let a = {};
+      let b = Schema.flatten(a);
       should.exist(b);
       b.should.equal(a);
     });
 
     it('should return a new object called with data containing an empty allOf', function () {
-      var a = {
+      let a = {
         allOf: []
       };
-      var b = Schema.flatten(a);
+      let b = Schema.flatten(a);
       should.exist(b);
       b.should.not.equal(a);
     });
 
     it('should preserve id and $schema of the top level object', function () {
-      var a = {
+      let a = {
         id: 'a',
         $schema: 'b',
         allOf: [{
@@ -197,7 +198,7 @@ describe('Schema', function() {
           $schema: 'd',
         }]
       };
-      var b = Schema.flatten(a);
+      let b = Schema.flatten(a);
       should.exist(b);
       b.should.not.equal(a);
       should.exist(b.id);
@@ -207,7 +208,7 @@ describe('Schema', function() {
     });
 
     it('should use the last one of: title, format, description, multipleOf, pattern (top level is last)', function () {
-      var a1 = {
+      let a1 = {
         allOf: [
           {
             title: 'title2',
@@ -224,7 +225,7 @@ describe('Schema', function() {
           }
         ]
       };
-      var a2 = {
+      let a2 = {
         title: 'title1',
         format: 'format1',
         description: 'description1',
@@ -246,7 +247,7 @@ describe('Schema', function() {
           }
         ]
       };
-      var b = Schema.flatten(a1);
+      let b = Schema.flatten(a1);
       b.title.should.equal(a1.allOf[1].title);
       b.format.should.equal(a1.allOf[1].format);
       b.description.should.equal(a1.allOf[1].description);
@@ -262,7 +263,7 @@ describe('Schema', function() {
     });
 
     it('should merge items', function() {
-      var a1 = {
+      let a1 = {
         items: {
           type: 'object',
           properties: {
@@ -302,12 +303,12 @@ describe('Schema', function() {
           }
         ]
       };
-      var b1 = Schema.flatten(a1);
+      let b1 = Schema.flatten(a1);
       b1.items.allOf.should.have.length(4);
     });
 
     it('should merge dependencies', function() {
-      var a1 = {
+      let a1 = {
         allOf: [
           {
             dependencies: {
@@ -334,7 +335,7 @@ describe('Schema', function() {
           }
         ]
       };
-      var b1 = Schema.flatten(a1);
+      let b1 = Schema.flatten(a1);
       b1.dependencies.a.should.deep.equal([ 'x', 'y', 'z' ]);
       b1.dependencies.b.should.deep.equal([ 'x', 'y' ]);
       b1.dependencies.c.should.deep.equal({ allOf: [ { type: 'object' }, { dependencies: { c: [ 'z' ] } } ] });
@@ -344,7 +345,7 @@ describe('Schema', function() {
     });
 
     it('should merge additional items and properties', function() {
-      var a1 = {
+      let a1 = {
         additionalProperties: {
           type: 'object',
           properties: {
@@ -408,11 +409,11 @@ describe('Schema', function() {
           }
         ]
       };
-      var b1 = Schema.flatten(a1);
+      let b1 = Schema.flatten(a1);
       b1.additionalProperties.allOf.should.have.length(4);
       b1.additionalItems.allOf.should.have.length(3);
 
-      var a2 = {
+      let a2 = {
         allOf: [
           {
             additionalProperties: false,
@@ -437,11 +438,11 @@ describe('Schema', function() {
           }
         ]
       };
-      var b2 = Schema.flatten(a2);
+      let b2 = Schema.flatten(a2);
       b2.additionalProperties.should.equal(false);
       b2.additionalItems.should.equal(false);
 
-      var a3 = {
+      let a3 = {
         allOf: [
           {
             additionalProperties: {
@@ -466,11 +467,11 @@ describe('Schema', function() {
           }
         ]
       };
-      var b3 = Schema.flatten(a3);
+      let b3 = Schema.flatten(a3);
       b3.additionalProperties.should.equal(false);
       b3.additionalItems.should.equal(false);
 
-      var a4 = {
+      let a4 = {
         allOf: [
           {
             additionalProperties: true,
@@ -481,11 +482,11 @@ describe('Schema', function() {
           }
         ]
       };
-      var b4 = Schema.flatten(a4);
+      let b4 = Schema.flatten(a4);
       b4.additionalProperties.should.equal(false);
       b4.additionalItems.should.equal(false);
 
-      var a5 = {
+      let a5 = {
         allOf: [
           {
             additionalProperties: true,
@@ -511,11 +512,11 @@ describe('Schema', function() {
           }
         ]
       };
-      var b5 = Schema.flatten(a5);
+      let b5 = Schema.flatten(a5);
       b5.additionalProperties.should.equal(a5.allOf[1].additionalProperties);
       b5.additionalItems.should.equal(a5.allOf[1].additionalItems);
 
-      var a6 = {
+      let a6 = {
         allOf: [
           {
             additionalProperties: true,
@@ -526,13 +527,13 @@ describe('Schema', function() {
           }
         ]
       };
-      var b6 = Schema.flatten(a6);
+      let b6 = Schema.flatten(a6);
       b6.additionalProperties.should.equal(true);
       b6.additionalItems.should.equal(true);
     });
 
     it('should merge each property with its specific rules', function () {
-      var a1 = {
+      let a1 = {
         type: 'test',
         allOf: [
           {
@@ -580,7 +581,7 @@ describe('Schema', function() {
           }
         ]
       };
-      var b1 = Schema.flatten(a1);
+      let b1 = Schema.flatten(a1);
       b1.type.should.equal('test');
       b1.default.should.equal(5);
       b1.minimum.should.equal(1);
@@ -594,7 +595,7 @@ describe('Schema', function() {
       b1.properties.should.deep.equal({ m: 1, n: 2, o: 4 });
       b1.patternProperties.should.deep.equal({ m: 1, n: 2, o: 4 });
 
-      var a2 = {
+      let a2 = {
         type: 'test',
         allOf: [
           {
@@ -642,7 +643,7 @@ describe('Schema', function() {
           }
         ]
       };
-      var b2 = Schema.flatten(a2);
+      let b2 = Schema.flatten(a2);
       b2.type.should.equal('test');
       b2.default.should.equal(6);
       b2.minimum.should.equal(1);
@@ -662,35 +663,32 @@ describe('Schema', function() {
   describe('validate', function() {
 
     it('should validate an empty schema', function() {
-      var s = new Schema({}, {});
-      s.validate(1).should.equal(1);
-      should.not.exist(s.validate());
+      let s = new UntypedSchema({}, {});
+      return s.validate(1).should.eventually.equal(1);
     });
 
     describe('type', function() {
-      it('should throw on a basic Schema instance', function() {
-        should.throw(function() {
-          var s = new Schema({ type: 'x' }, {});
-          s.validate({});
-        }, global.SchemaError, 'type');
+      it('should reject on a basic Schema instance', function() {
+        let s = new UntypedSchema({ type: 'x' }, {});
+        return s.validate({}).should.be.rejectedWith(global.SchemaError, 'type');
       });
     });
 
     describe('enum', function() {
-      it('should throw if the (scalar) value is not included in the enum', function() {
-        var s = new Schema({ enum: [ 'a', true, 5 ] }, {});
-        s.validate('a').should.equal('a');
-        s.validate(true).should.equal(true);
-        s.validate(5).should.equal(5);
-        should.throw(function() {
-          s.validate('b');
-        }, global.ValidationError, 'enum');
+      it('should reject if the (scalar) value is not included in the enum', function() {
+        let s = new UntypedSchema({ enum: [ 'a', true, 5 ] }, {});
+        return Promise.all([
+          s.validate('a').should.eventually.equal('a'),
+          s.validate(true).should.eventually.equal(true),
+          s.validate(5).should.eventually.equal(5),
+          s.validate('b').should.be.rejectedWith(global.ValidationError, 'enum')
+        ]);
       });
     });
 
     describe('allOf', function() {
-      it('should throw if not all schemas validate', function() {
-        var s = new Schema({
+      it('should reject if not all schemas validate', function() {
+        let s = new UntypedSchema({
           allOf: [
             {
               type: 'integer',
@@ -703,18 +701,14 @@ describe('Schema', function() {
           ]
         }, { });
         s.init();
-        should.throw(function() {
-          s.validate(2);
-        }, global.ValidationError, 'minimum');
-        should.throw(function() {
-          s.validate(6);
-        }, global.ValidationError, 'maximum');
-        should.not.throw(function() {
-          s.validate(4);
-        });
+        return Promise.all([
+          s.validate(2).should.be.rejectedWith(global.ValidationError, 'minimum'),
+          s.validate(6).should.be.rejectedWith(global.ValidationError, 'maximum'),
+          s.validate(4).should.be.fulfilled
+        ]);
       });
       it('should use first encountered default as default', function() {
-        var s = Schema.create({
+        let s = Schema.create({
           type: 'object',
           properties: {
             a: {
@@ -731,13 +725,13 @@ describe('Schema', function() {
             }
           }
         }, { });
-        s.validate({}).a.should.equal(5);
+        return s.validate({}).should.eventually.have.property('a', 5);
       });
     });
 
     describe('anyOf', function() {
       it('should throw if none of schemas validate', function() {
-        var s = new Schema({
+        let s = new UntypedSchema({
           anyOf: [
             {
               type: 'integer',
@@ -750,18 +744,14 @@ describe('Schema', function() {
           ]
         }, { });
         s.init();
-        should.not.throw(function() {
-          s.validate(3);
-        });
-        should.not.throw(function() {
-          s.validate(7);
-        });
-        should.throw(function() {
-          s.validate(2);
-        }, global.ValidationError, 'anyOf');
+        return Promise.all([
+          s.validate(3).should.be.fulfilled,
+          s.validate(7).should.be.fulfilled,
+          s.validate(2).should.be.rejectedWith(global.ValidationError, 'anyOf')
+        ]);
       });
       it('should use first encountered default as default', function() {
-        var s = Schema.create({
+        let s = Schema.create({
           type: 'object',
           properties: {
             a: {
@@ -778,13 +768,13 @@ describe('Schema', function() {
             }
           }
         }, { });
-        s.validate({}).a.should.equal(5);
+        return s.validate({}).should.eventually.have.property('a', 5);
       });
     });
 
     describe('oneOf', function() {
       it('should throw if more than one schema validate', function() {
-        var s = new Schema({
+        let s = new UntypedSchema({
           oneOf: [
             {
               type: 'integer',
@@ -797,18 +787,14 @@ describe('Schema', function() {
           ]
         }, { });
         s.init();
-        should.not.throw(function() {
-          s.validate(3);
-        });
-        should.not.throw(function() {
-          s.validate(7);
-        });
-        should.throw(function() {
-          s.validate(12);
-        }, global.ValidationError, 'oneOf');
+        return Promise.all([
+          s.validate(3).should.be.fulfilled,
+          s.validate(7).should.be.fulfilled,
+          s.validate(12).should.be.rejectedWith(global.ValidationError, 'oneOf')
+        ]);
       });
       it('should use first encountered default as default', function() {
-        var s = Schema.create({
+        let s = Schema.create({
           type: 'object',
           properties: {
             a: {
@@ -825,28 +811,24 @@ describe('Schema', function() {
             }
           }
         }, { });
-        s.validate({}).a.should.equal(5);
+        return s.validate({}).should.eventually.have.property('a', 5);
       });
     });
 
     describe('not', function() {
       it('should throw if the schema validates', function() {
-        var s = new Schema({
+        let s = new UntypedSchema({
           not: {
             type: 'integer',
             multipleOf: 3
           }
         }, { });
         s.init();
-        should.not.throw(function() {
-          s.validate('ciao');
-        });
-        should.not.throw(function() {
-          s.validate(7);
-        });
-        should.throw(function() {
-          s.validate(6);
-        }, global.ValidationError, 'not');
+        return Promise.all([
+          s.validate('ciao').should.be.fulfilled,
+          s.validate(7).should.be.fulfilled,
+          s.validate(6).should.be.rejectedWith(global.ValidationError, 'not')
+        ]);
       });
     });
 

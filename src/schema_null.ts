@@ -1,11 +1,11 @@
 import { SchemaOptions, ValidationError } from './global';
-import { Schema } from './schema';
+import { Schema, UntypedSchema } from './schema';
 
-export class NullSchema extends Schema {
+export class NullSchema extends UntypedSchema {
   constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data:any, path:string):any {
+  async validateType(data:any, path:string): Promise<any> {
     if (data !== null) {
       throw new ValidationError(path, this.scope, 'type');
     }

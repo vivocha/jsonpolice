@@ -1,4 +1,4 @@
-var chai = require('chai')
+const chai = require('chai')
   , spies = require('chai-spies')
   , should = chai.should()
   , global = require('../dist/global')
@@ -10,20 +10,18 @@ describe('IntegerSchema', function() {
 
   describe('validate', function() {
 
-    var s = new IntegerSchema({
+    let s = new IntegerSchema({
       type: 'number',
       minimum: 3,
       maximum: 5
     }, {});
 
     it('should throw if not a integer', function() {
-      should.throw(function() {
-        s.validate(3.5);
-      }, global.ValidationError, 'type');
+      return s.validate(3.5).should.be.rejectedWith(global.ValidationError, 'type');
     });
 
     it('should successfully validate an integer fulfilling all the criteria', function() {
-      s.validate(3).should.equal(3);
+      return s.validate(3).should.eventually.equal(3);
     });
 
   });

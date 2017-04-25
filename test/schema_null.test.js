@@ -1,4 +1,4 @@
-var chai = require('chai')
+const chai = require('chai')
   , spies = require('chai-spies')
   , should = chai.should()
   , global = require('../dist/global')
@@ -10,18 +10,16 @@ describe('NullSchema', function() {
 
   describe('validate', function() {
 
-    var s = new NullSchema({
+    let s = new NullSchema({
       type: 'null'
     }, {});
 
     it('should throw if not null', function() {
-      should.throw(function() {
-        s.validate('ciao');
-      }, global.ValidationError, 'type');
+      return s.validate('ciao').should.be.rejectedWith(global.ValidationError, 'type');
     });
 
     it('should validate a null', function() {
-      should.not.exist(s.validate(null));
+      return s.validate(null).should.eventually.equal(null);
     });
 
   });

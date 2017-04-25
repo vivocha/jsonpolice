@@ -48,134 +48,10 @@ export interface SchemaFactory {
   new (data:any, opts:SchemaOptions): Schema;
 }
 
-export class Schema {
-  readonly scope:string;
-
-  constructor(protected data:any, protected opts:SchemaOptions) {
-    this.scope = refs.scope(data) || data.id || opts.scope || '#';
+export abstract class Schema {
+  constructor(readonly scope:string, protected opts:SchemaOptions) {
   }
-  validate(data:any, path:string = ''):any {
-    data = this.default(data);
-    if (typeof data !== 'undefined') {
-      if (enumerableAndDefined(this.data, 'type')) {
-        data = this.validateType(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'enum')) {
-        data = this.validateEnum(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'allOf')) {
-        data = this.validateAllOf(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'anyOf')) {
-        data = this.validateAnyOf(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'oneOf')) {
-        data = this.validateOneOf(data, path);
-      }
-      if (enumerableAndDefined(this.data, 'not')) {
-        data = this.validateNot(data, path);
-      }
-    }
-    return data;
-  }
-  protected init():void {
-    if (enumerableAndDefined(this.data, 'allOf')) {
-      _.each(this.data.allOf, (data, i) => {
-        Schema.create(this.data.allOf[i], Object.assign({}, this.opts, { scope: this.scope + '/allOf/' + i }));
-      });
-    }
-    if (enumerableAndDefined(this.data, 'anyOf')) {
-      _.each(this.data.anyOf, (data, i) => {
-        Schema.create(this.data.anyOf[i], Object.assign({}, this.opts, { scope: this.scope + '/anyOf/' + i }));
-      });
-    }
-    if (enumerableAndDefined(this.data, 'oneOf')) {
-      _.each(this.data.oneOf, (data, i) => {
-        Schema.create(this.data.oneOf[i], Object.assign({}, this.opts, { scope: this.scope + '/oneOf/' + i }));
-      });
-    }
-    if (enumerableAndDefined(this.data, 'not')) {
-      Schema.create(this.data.not, Object.assign({}, this.opts, { scope: this.scope + '/not' }));
-    }
-  }
-  protected default(data: any): any {
-    let def;
-    if (defined(data)) {
-      def = data;
-    }
-    if (!defined(def) && enumerableAndDefined(this.data, 'allOf')) {
-      for (let i = 0 ; !def && i < this.data.allOf.length ; i++) {
-        def = this.data.allOf[i][__schema].default();
-      }
-    }
-    if (!defined(def) && enumerableAndDefined(this.data, 'anyOf')) {
-      for (let i = 0 ; !def && i < this.data.anyOf.length ; i++) {
-        def = this.data.anyOf[i][__schema].default();
-      }
-    }
-    if (!defined(def) && enumerableAndDefined(this.data, 'oneOf')) {
-      for (let i = 0 ; !def && i < this.data.oneOf.length ; i++) {
-        def = this.data.oneOf[i][__schema].default();
-      }
-    }
-    if (!defined(def) && enumerableAndDefined(this.data, 'default')) {
-      def = _.cloneDeep(this.data.default);
-    }
-    return def;
-  }
-  protected validateType(data:any, path:string):any {
-    throw new SchemaError(this.scope, 'type', data.type);
-  }
-  protected validateEnum(data:any, path:string):any {
-    let found = false;
-    for (let i = 0 ; !found && i < this.data.enum.length ; i++) {
-      found = _.isEqual(data, this.data.enum[i]);
-    }
-    if (!found) {
-      throw new ValidationError(path, this.scope, 'enum');
-    }
-    return data;
-  }
-  protected validateAllOf(data:any, path:string):any {
-    for (let i = 0 ; i < this.data.allOf.length ; i++) {
-      data = this.data.allOf[i][__schema].validate(data, path);
-    }
-    return data;
-  }
-  protected validateAnyOf(data:any, path:string):any {
-    let found = false, _data;
-    for (let i = 0 ; !found && i < this.data.anyOf.length ; i++) {
-      try {
-        _data = this.data.anyOf[i][__schema].validate(data, path);
-        found = true;
-      } catch(e) {}
-    }
-    if (!found) {
-      throw new ValidationError(path, this.scope, 'anyOf');
-    }
-    return _data;
-  }
-  protected validateOneOf(data:any, path:string):any {
-    let count = 0, _data;
-    for (let i = 0 ; count < 2 && i < this.data.oneOf.length ; i++) {
-      try {
-        _data = this.data.oneOf[i][__schema].validate(data, path);
-        count++;
-      } catch(e) {}
-    }
-    if (count !== 1) {
-      throw new ValidationError(path, this.scope, 'oneOf');
-    }
-    return _data;
-  }
-  protected validateNot(data:any, path:string):any {
-    try {
-      this.data.not[__schema].validate(data, path);
-    } catch(e) {
-      return data;
-    }
-    throw new ValidationError(path, this.scope, 'not');
-  }
+  abstract async validate(data:any, path:string): Promise<any>;
 
   static factories:{
     [type:string]: SchemaFactory
@@ -197,14 +73,14 @@ export class Schema {
               _type.type = type;
               _data.anyOf.push(_type);
             });
-            schema = new Schema(_data, opts);
+            schema = new UntypedSchema(_data, opts);
           } else if (Schema.factories[data.type]) {
             schema = new Schema.factories[data.type](data, opts);
           } else {
             throw new SchemaError(opts.scope, 'type', data.type);
           }
         } else {
-          schema = new Schema(data, opts);
+          schema = new UntypedSchema(data, opts);
         }
         data[__schema] = schema;
         schema.init();
@@ -325,5 +201,132 @@ export class Schema {
         return o;
       }, out);
     }
+  }
+}
+
+export class UntypedSchema extends Schema{
+  constructor(protected data:any, protected opts:SchemaOptions) {
+    super(refs.scope(data) || data.id || opts.scope || '#', opts);
+  }
+  protected init():void {
+    if (enumerableAndDefined(this.data, 'allOf')) {
+      _.each(this.data.allOf, (data, i) => {
+        Schema.create(this.data.allOf[i], Object.assign({}, this.opts, { scope: this.scope + '/allOf/' + i }));
+      });
+    }
+    if (enumerableAndDefined(this.data, 'anyOf')) {
+      _.each(this.data.anyOf, (data, i) => {
+        Schema.create(this.data.anyOf[i], Object.assign({}, this.opts, { scope: this.scope + '/anyOf/' + i }));
+      });
+    }
+    if (enumerableAndDefined(this.data, 'oneOf')) {
+      _.each(this.data.oneOf, (data, i) => {
+        Schema.create(this.data.oneOf[i], Object.assign({}, this.opts, { scope: this.scope + '/oneOf/' + i }));
+      });
+    }
+    if (enumerableAndDefined(this.data, 'not')) {
+      Schema.create(this.data.not, Object.assign({}, this.opts, { scope: this.scope + '/not' }));
+    }
+  }
+  protected default(data: any): any {
+    let def;
+    if (defined(data)) {
+      def = data;
+    }
+    if (!defined(def) && enumerableAndDefined(this.data, 'allOf')) {
+      for (let i = 0 ; !def && i < this.data.allOf.length ; i++) {
+        def = this.data.allOf[i][__schema].default();
+      }
+    }
+    if (!defined(def) && enumerableAndDefined(this.data, 'anyOf')) {
+      for (let i = 0 ; !def && i < this.data.anyOf.length ; i++) {
+        def = this.data.anyOf[i][__schema].default();
+      }
+    }
+    if (!defined(def) && enumerableAndDefined(this.data, 'oneOf')) {
+      for (let i = 0 ; !def && i < this.data.oneOf.length ; i++) {
+        def = this.data.oneOf[i][__schema].default();
+      }
+    }
+    if (!defined(def) && enumerableAndDefined(this.data, 'default')) {
+      def = _.cloneDeep(this.data.default);
+    }
+    return def;
+  }
+
+  async validate(data:any, path:string = ''): Promise<any> {
+    data = this.default(data);
+    if (enumerableAndDefined(this.data, 'type')) {
+      data = await this.validateType(data, path);
+    }
+    if (enumerableAndDefined(this.data, 'enum')) {
+      data = await this.validateEnum(data, path);
+    }
+    if (enumerableAndDefined(this.data, 'allOf')) {
+      data = await this.validateAllOf(data, path);
+    }
+    if (enumerableAndDefined(this.data, 'anyOf')) {
+      data = await this.validateAnyOf(data, path);
+    }
+    if (enumerableAndDefined(this.data, 'oneOf')) {
+      data = await this.validateOneOf(data, path);
+    }
+    if (enumerableAndDefined(this.data, 'not')) {
+      data = await this.validateNot(data, path);
+    }
+    return data;
+  }
+  protected async validateType(data:any, path:string): Promise<any> {
+    throw new SchemaError(this.scope, 'type', data.type);
+  }
+  protected async validateEnum(data:any, path:string): Promise<any> {
+    let found = false;
+    for (let i = 0 ; !found && i < this.data.enum.length ; i++) {
+      found = _.isEqual(data, this.data.enum[i]);
+    }
+    if (!found) {
+      throw new ValidationError(path, this.scope, 'enum');
+    }
+    return data;
+  }
+  protected async validateAllOf(data:any, path:string): Promise<any> {
+    for (let i = 0 ; i < this.data.allOf.length ; i++) {
+      data = await this.data.allOf[i][__schema].validate(data, path);
+    }
+    return data;
+  }
+  protected async validateAnyOf(data:any, path:string): Promise<any> {
+    let found = false, _data;
+    for (let i = 0 ; !found && i < this.data.anyOf.length ; i++) {
+      try {
+        _data = await this.data.anyOf[i][__schema].validate(data, path);
+        found = true;
+      } catch(e) {}
+    }
+    if (!found) {
+      throw new ValidationError(path, this.scope, 'anyOf');
+    }
+    return _data;
+  }
+  protected async validateOneOf(data:any, path:string): Promise<any> {
+    let count = 0, _data;
+    for (let i = 0 ; count < 2 && i < this.data.oneOf.length ; i++) {
+      try {
+        _data = await this.data.oneOf[i][__schema].validate(data, path);
+        count++;
+      } catch(e) {}
+    }
+    if (count !== 1) {
+      throw new ValidationError(path, this.scope, 'oneOf');
+    }
+    return _data;
+  }
+  protected async validateNot(data:any, path:string): Promise<any> {
+    try {
+      await this.data.not[__schema].validate(data, path);
+    } catch(e) {
+      return data;
+    }
+    throw new ValidationError(path, this.scope, 'not');
   }
 }

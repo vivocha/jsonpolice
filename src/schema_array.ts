@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
 import { __schema, enumerableAndDefined, SchemaOptions, SchemaError, ValidationError } from './global';
-import { Schema } from './schema';
+import { Schema, UntypedSchema } from './schema';
 
 let seps = {
   'csv': ',',
@@ -9,7 +9,7 @@ let seps = {
   'pipes': '|'
 };
 
-export class ArraySchema extends Schema {
+export class ArraySchema extends UntypedSchema {
   constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
@@ -34,7 +34,7 @@ export class ArraySchema extends Schema {
       }
     }
   }
-  validateType(data:any, path:string):any {
+  async validateType(data:any, path:string): Promise<any> {
     if (typeof data === 'string') {
       let sep = seps[this.data.collectionFormat || 'csv'];
       if (!sep) {
@@ -56,11 +56,11 @@ export class ArraySchema extends Schema {
       let addIsObject = typeof this.data.additionalItems === 'object';
       for (let i = 0 ; i < data.length ; i++) {
         if (itemsIsArray && i < this.data.items.length) {
-          data[i] = this.data.items[i][__schema].validate(data[i], path + '/' + i);
+          data[i] = await this.data.items[i][__schema].validate(data[i], path + '/' + i);
         } else if (itemsIsObject) {
-          data[i] = this.data.items[__schema].validate(data[i], path + '/' + i);
+          data[i] = await this.data.items[__schema].validate(data[i], path + '/' + i);
         } else if (addIsObject) {
-          data[i] = this.data.additionalItems[__schema].validate(data[i], path + '/' + i);
+          data[i] = await this.data.additionalItems[__schema].validate(data[i], path + '/' + i);
         } else if (this.data.additionalItems === false) {
           throw new ValidationError(path + '/' + i, this.scope, 'additionalItems');
         }

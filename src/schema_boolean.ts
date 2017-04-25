@@ -1,11 +1,11 @@
 import { SchemaOptions, ValidationError } from './global';
-import { Schema } from './schema';
+import { Schema, UntypedSchema } from './schema';
 
-export class BooleanSchema extends Schema {
+export class BooleanSchema extends UntypedSchema {
   constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data:any, path:string):any {
+  async validateType(data:any, path:string): Promise<any> {
     if (typeof data === 'string') {
       if (data === 'true' || data === '1') {
         data = true;

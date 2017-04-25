@@ -84,9 +84,7 @@ describe('jsonpolice', function() {
           a: { type: 'number'}
         }
       }).then(function(s) {
-        should.not.throw(function () {
-          s.validate({ a: 1, b: false });
-        });
+        s.validate({ a: 1, b: false }).should.be.fulfilled;
       });
     });
 
@@ -103,12 +101,8 @@ describe('jsonpolice', function() {
       }, opts).then(function(s) {
         s.data.additionalProperties.should.equal(s.data);
         Object.keys(opts.store).should.have.length(0);
-        should.throw(function() {
-          s.validate({ a: 1, b: true });
-        }, global.ValidationError, 'type');
-        should.not.throw(function() {
-          s.validate({ a: 1, b: { a: 5 } });
-        });
+        s.validate({ a: 1, b: true }).should.be.rejected;
+        s.validate({ a: 1, b: { a: 5 } }).should.be.fulfilled;
       });
     });
 
@@ -339,10 +333,8 @@ describe('jsonpolice', function() {
       let opts = {};
       return jp.create(spec, opts).then(schema => {
         opts.store['http://json-schema.org/draft-04/schema#'].should.equal(schema.data);
-        should.throw(function() {
-          schema.validate({ type: true });
-        }, jp.ValidationError, 'anyOf');
-        should.not.throw(function() {
+        return Promise.all([
+          schema.validate({ type: true }).should.be.rejectedWith(jp.ValidationError, 'anyOf'),
           schema.validate({
             type: 'object',
             properties: {
@@ -351,8 +343,8 @@ describe('jsonpolice', function() {
               },
             },
             additionalProperties: { $ref: '#' }
-          });
-        });
+          }).should.be.fulfilled
+        ]);
       });
     });
 

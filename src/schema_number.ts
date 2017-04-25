@@ -1,11 +1,11 @@
 import { enumerableAndDefined, SchemaOptions, ValidationError } from './global';
-import { Schema } from './schema';
+import { Schema, UntypedSchema } from './schema';
 
-export class NumberSchema extends Schema {
+export class NumberSchema extends UntypedSchema {
   constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
-  validateType(data:any, path:string):any {
+  async validateType(data:any, path:string): Promise<any> {
     if (typeof data === 'string') {
       data = +data;
     }

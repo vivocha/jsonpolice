@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
 import { __schema, defined, enumerableAndDefined, testRegExp, SchemaOptions, SchemaError, ValidationError } from './global';
-import { Schema } from './schema';
+import { Schema, UntypedSchema } from './schema';
 
 let __salmon = Symbol();
 
@@ -30,7 +30,7 @@ function createDefaultProperty(schema, obj, key) {
   });
 }
 
-export class ObjectSchema extends Schema {
+export class ObjectSchema extends UntypedSchema {
   constructor(data:any, opts:SchemaOptions) {
     super(data, opts);
   }
@@ -62,7 +62,7 @@ export class ObjectSchema extends Schema {
       }
     }
   }
-  default(data:any):any {
+  default(data:any): any {
     let def = super.default(data);
     if (defined(def) && def !== null && typeof def === 'object') {
       if (enumerableAndDefined(this.data, 'properties')) {
@@ -75,7 +75,7 @@ export class ObjectSchema extends Schema {
     }
     return def;
   }
-  validateType(data:any, path:string):any {
+  async validateType(data:any, path:string): Promise<any> {
     if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       throw new ValidationError(path, this.scope, 'type');
     }
@@ -104,7 +104,7 @@ export class ObjectSchema extends Schema {
                 }
               }
             } else {
-              data[k] = this.data.dependencies[k][__schema].validate(data[k], path + '/' + k);
+              data[k] = await this.data.dependencies[k][__schema].validate(data[k], path + '/' + k);
             }
           }
         }
@@ -114,12 +114,12 @@ export class ObjectSchema extends Schema {
           found = false;
           if (enumerableAndDefined(this.data, 'properties') && this.data.properties[k]) {
             found = true;
-            data[k] = this.data.properties[k][__schema].validate(data[k], path + '/' + k);
+            data[k] = await this.data.properties[k][__schema].validate(data[k], path + '/' + k);
           } else if (enumerableAndDefined(this.data, 'patternProperties')) {
             for (i in this.data.patternProperties) {
               if (testRegExp(i, k)) {
                 found = true;
-                data[k] = this.data.patternProperties[i][__schema].validate(data[k], path + '/' + k);
+                data[k] = await this.data.patternProperties[i][__schema].validate(data[k], path + '/' + k);
               }
             }
           }
@@ -131,7 +131,7 @@ export class ObjectSchema extends Schema {
                 throw new ValidationError(path + '/' + k, this.scope, 'property');
               }
             } else if (typeof this.data.additionalProperties === 'object') {
-              this.data.additionalProperties[__schema].validate(data[k], path + '/' + k);
+              await this.data.additionalProperties[__schema].validate(data[k], path + '/' + k);
             }
           }
         }

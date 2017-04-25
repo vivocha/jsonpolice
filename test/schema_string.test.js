@@ -1,4 +1,4 @@
-var chai = require('chai')
+const chai = require('chai')
   , spies = require('chai-spies')
   , should = chai.should()
   , global = require('../dist/global')
@@ -10,7 +10,7 @@ describe('StringSchema', function() {
 
   describe('validate', function() {
 
-    var s = new StringSchema({
+    let s = new StringSchema({
       type: 'number',
       minLength: 3,
       maxLength: 6,
@@ -18,112 +18,92 @@ describe('StringSchema', function() {
     }, {});
 
     it('should throw if not a string', function() {
-      should.throw(function() {
-        s.validate(1);
-      }, global.ValidationError, 'type');
+      return s.validate(1).should.be.rejectedWith(global.ValidationError, 'type');
     });
 
     it('should throw if minLength not fulfilled', function() {
-      should.throw(function() {
-        s.validate('aa');
-      }, global.ValidationError, 'minLength');
+      return s.validate('aa').should.be.rejectedWith(global.ValidationError, 'minLength');
     });
 
     it('should throw if maxLength not fulfilled', function() {
-      should.throw(function() {
-        s.validate('aaaaaaa');
-      }, global.ValidationError, 'maxLength');
+      return s.validate('aaaaaaa').should.be.rejectedWith(global.ValidationError, 'maxLength');
     });
 
     it('should throw if pattern not fulfilled', function() {
-      should.throw(function() {
-        s.validate('aaaaaa');
-      }, global.ValidationError, 'pattern');
+      return s.validate('aaaaaa').should.be.rejectedWith(global.ValidationError, 'pattern');
     });
 
     it('should throw if format is \'email\' and data is malformed', function() {
-      var s = new StringSchema({
+      let s = new StringSchema({
         type: 'number',
         format: 'email'
       }, {});
-      should.throw(function() {
-        s.validate('aaaaaa');
-      }, global.ValidationError, 'format');
+      return s.validate('aaaaaa').should.be.rejectedWith(global.ValidationError, 'format');
     });
 
     it('should throw if format is \'hostname\' and data is malformed', function() {
-      var s = new StringSchema({
+      let s = new StringSchema({
         type: 'number',
         format: 'hostname'
       }, {});
-      should.throw(function() {
-        s.validate('aaa_aaa');
-      }, global.ValidationError, 'format');
+      return s.validate('aaa_aaa').should.be.rejectedWith(global.ValidationError, 'format');
     });
 
     it('should throw if format is \'ipv4\' and data is malformed', function() {
-      var s = new StringSchema({
+      let s = new StringSchema({
         type: 'number',
         format: 'ipv4'
       }, {});
-      should.throw(function() {
-        s.validate('aaaaaa');
-      }, global.ValidationError, 'format');
+      return s.validate('aaaaaa').should.be.rejectedWith(global.ValidationError, 'format');
     });
 
     it('should throw if format is \'ipv6\' and data is malformed', function() {
-      var s = new StringSchema({
+      let s = new StringSchema({
         type: 'number',
         format: 'ipv6'
       }, {});
-      should.throw(function() {
-        s.validate('aaaaaa');
-      }, global.ValidationError, 'format');
+      return s.validate('aaaaaa').should.be.rejectedWith(global.ValidationError, 'format');
     });
 
-    it('should throw if format is \'uri\' and data is malformed'/*, function() {
-      var s = new StringSchema({
+    it.skip('should throw if format is \'uri\' and data is malformed', function() {
+      let s = new StringSchema({
         type: 'number',
         format: 'uri'
       }, {});
-      should.throw(function() {
-        s.validate('aaa');
-      }, global.ValidationError, 'format');
-    }*/);
+      return s.validate('http://x:-100').should.be.rejectedWith(global.ValidationError, 'format');
+    });
 
     it('should successfully validate if format is \'date-time\' and a Date instance is passed', function() {
-      var s = new StringSchema({
+      let s = new StringSchema({
         type: 'number',
         format: 'date-time'
       }, {});
-      var now = new Date();
-      s.validate(now).should.equal(now);
+      let now = new Date();
+      return s.validate(now).should.eventually.equal(now);
     });
 
     it('should successfully validate if format is \'date-time\' and a ISO date string is passed', function() {
-      var s = new StringSchema({
+      let s = new StringSchema({
         type: 'number',
         format: 'date-time'
       }, {});
-      var now = new Date();
-      s.validate(now.toISOString()).should.be.a.instanceOf(Date);
+      let now = new Date();
+      return s.validate(now.toISOString()).should.eventually.be.a.instanceOf(Date);
     });
 
     it('should throw if format is \'date-time\' and data is malformed', function() {
-      var s = new StringSchema({
+      let s = new StringSchema({
         type: 'number',
         format: 'date-time'
       }, {});
-      should.throw(function() {
-        s.validate('aaaaaa');
-      }, global.ValidationError, 'format');
-      should.throw(function() {
-        s.validate(1);
-      }, global.ValidationError, 'type');
+      return Promise.all([
+        s.validate('aaaaaa').should.be.rejectedWith(global.ValidationError, 'format'),
+        s.validate(1).should.be.rejectedWith(global.ValidationError, 'type')
+      ]);
     });
 
     it('should successfully validate a string fulfilling all the criteria', function() {
-      s.validate('axxb').should.equal('axxb');
+      return s.validate('axxb').should.eventually.equal('axxb');
     });
 
   });
