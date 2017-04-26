@@ -660,6 +660,15 @@ describe('Schema', function() {
 
   });
 
+  describe('schema', function() {
+
+    it('should resolve the the raw schema object', function() {
+      let s = new UntypedSchema({ enum: [ 'a', true, 5 ] }, {});
+      s.schema().should.eventually.equal(s.data);
+    });
+
+  });
+
   describe('validate', function() {
 
     it('should validate an empty schema', function() {

@@ -51,6 +51,7 @@ export interface SchemaFactory {
 export abstract class Schema {
   constructor(readonly scope:string, protected opts:SchemaOptions) {
   }
+  abstract async schema(): Promise<any>;
   abstract async validate(data:any, path:string): Promise<any>;
 
   static factories:{
@@ -204,7 +205,7 @@ export abstract class Schema {
   }
 }
 
-export class UntypedSchema extends Schema{
+export class UntypedSchema extends Schema {
   constructor(protected data:any, protected opts:SchemaOptions) {
     super(refs.scope(data) || data.id || opts.scope || '#', opts);
   }
@@ -254,6 +255,9 @@ export class UntypedSchema extends Schema{
     return def;
   }
 
+  async schema(): Promise<any> {
+    return this.data;
+  }
   async validate(data:any, path:string = ''): Promise<any> {
     data = this.default(data);
     if (enumerableAndDefined(this.data, 'type')) {
