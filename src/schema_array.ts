@@ -56,11 +56,11 @@ export class ArraySchema extends UntypedSchema {
       let addIsObject = typeof this.data.additionalItems === 'object';
       for (let i = 0 ; i < data.length ; i++) {
         if (itemsIsArray && i < this.data.items.length) {
-          data[i] = await this.data.items[i][__schema].validate(data[i], path + '/' + i);
+          data[i] = await Schema.get(this.data.items[i]).validate(data[i], path + '/' + i);
         } else if (itemsIsObject) {
-          data[i] = await this.data.items[__schema].validate(data[i], path + '/' + i);
+          data[i] = await Schema.get(this.data.items).validate(data[i], path + '/' + i);
         } else if (addIsObject) {
-          data[i] = await this.data.additionalItems[__schema].validate(data[i], path + '/' + i);
+          data[i] = await Schema.get(this.data.additionalItems).validate(data[i], path + '/' + i);
         } else if (this.data.additionalItems === false) {
           throw new ValidationError(path + '/' + i, this.scope, 'additionalItems');
         }

@@ -53,6 +53,8 @@ export abstract class Schema {
   }
   abstract async schema(): Promise<any>;
   abstract async validate(data:any, path:string): Promise<any>;
+  protected abstract init(): void;
+  abstract default(data?: any): any;
 
   static factories:{
     [type:string]: SchemaFactory
@@ -60,8 +62,14 @@ export abstract class Schema {
   static registerFactory(type:string, factory:SchemaFactory) {
     Schema.factories[type] = factory;
   }
-  static create(data:any, opts:SchemaOptions = {}):Schema {
-    let schema;
+  static attach(data: any, schema: Schema) {
+    data[__schema] = schema;
+  }
+  static get(data: any): Schema {
+    return data[__schema] as Schema;
+  }
+  static create(data:any, opts:SchemaOptions = {}): Schema {
+    let schema: Schema;
     if (defined(data)) {
       if (data[__schema] instanceof Schema) {
         return data[__schema];
@@ -83,7 +91,7 @@ export abstract class Schema {
         } else {
           schema = new UntypedSchema(data, opts);
         }
-        data[__schema] = schema;
+        Schema.attach(data, schema);
         schema.init();
         return schema;
       }
@@ -229,24 +237,25 @@ export class UntypedSchema extends Schema {
       Schema.create(this.data.not, Object.assign({}, this.opts, { scope: this.scope + '/not' }));
     }
   }
-  protected default(data: any): any {
+
+  default(data?: any): any {
     let def;
     if (defined(data)) {
       def = data;
     }
     if (!defined(def) && enumerableAndDefined(this.data, 'allOf')) {
       for (let i = 0 ; !def && i < this.data.allOf.length ; i++) {
-        def = this.data.allOf[i][__schema].default();
+        def = Schema.get(this.data.allOf[i]).default();
       }
     }
     if (!defined(def) && enumerableAndDefined(this.data, 'anyOf')) {
       for (let i = 0 ; !def && i < this.data.anyOf.length ; i++) {
-        def = this.data.anyOf[i][__schema].default();
+        def = Schema.get(this.data.anyOf[i]).default();
       }
     }
     if (!defined(def) && enumerableAndDefined(this.data, 'oneOf')) {
       for (let i = 0 ; !def && i < this.data.oneOf.length ; i++) {
-        def = this.data.oneOf[i][__schema].default();
+        def = Schema.get(this.data.oneOf[i]).default();
       }
     }
     if (!defined(def) && enumerableAndDefined(this.data, 'default')) {
@@ -295,7 +304,7 @@ export class UntypedSchema extends Schema {
   }
   protected async validateAllOf(data:any, path:string): Promise<any> {
     for (let i = 0 ; i < this.data.allOf.length ; i++) {
-      data = await this.data.allOf[i][__schema].validate(data, path);
+      data = await Schema.get(this.data.allOf[i]).validate(data, path);
     }
     return data;
   }
@@ -303,7 +312,7 @@ export class UntypedSchema extends Schema {
     let found = false, _data;
     for (let i = 0 ; !found && i < this.data.anyOf.length ; i++) {
       try {
-        _data = await this.data.anyOf[i][__schema].validate(data, path);
+        _data = await Schema.get(this.data.anyOf[i]).validate(data, path);
         found = true;
       } catch(e) {}
     }
@@ -316,7 +325,7 @@ export class UntypedSchema extends Schema {
     let count = 0, _data;
     for (let i = 0 ; count < 2 && i < this.data.oneOf.length ; i++) {
       try {
-        _data = await this.data.oneOf[i][__schema].validate(data, path);
+        _data = await Schema.get(this.data.oneOf[i]).validate(data, path);
         count++;
       } catch(e) {}
     }
@@ -327,7 +336,7 @@ export class UntypedSchema extends Schema {
   }
   protected async validateNot(data:any, path:string): Promise<any> {
     try {
-      await this.data.not[__schema].validate(data, path);
+      await Schema.get(this.data.not).validate(data, path);
     } catch(e) {
       return data;
     }

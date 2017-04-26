@@ -114,12 +114,12 @@ export class ObjectSchema extends UntypedSchema {
           found = false;
           if (enumerableAndDefined(this.data, 'properties') && this.data.properties[k]) {
             found = true;
-            data[k] = await this.data.properties[k][__schema].validate(data[k], path + '/' + k);
+            data[k] = await Schema.get(this.data.properties[k]).validate(data[k], path + '/' + k);
           } else if (enumerableAndDefined(this.data, 'patternProperties')) {
             for (i in this.data.patternProperties) {
               if (testRegExp(i, k)) {
                 found = true;
-                data[k] = await this.data.patternProperties[i][__schema].validate(data[k], path + '/' + k);
+                data[k] = await Schema.get(this.data.patternProperties[i]).validate(data[k], path + '/' + k);
               }
             }
           }
@@ -131,7 +131,7 @@ export class ObjectSchema extends UntypedSchema {
                 throw new ValidationError(path + '/' + k, this.scope, 'property');
               }
             } else if (typeof this.data.additionalProperties === 'object') {
-              await this.data.additionalProperties[__schema].validate(data[k], path + '/' + k);
+              await Schema.get(this.data.additionalProperties).validate(data[k], path + '/' + k);
             }
           }
         }
