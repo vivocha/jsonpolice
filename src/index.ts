@@ -9,7 +9,7 @@ import './schema_null';
 import './schema_object';
 import './schema_string';
 
-export { Schema } from './schema';
+export { Schema, DynamicSchema } from './schema';
 export { SchemaError, ValidationError, SchemaOptions } from './global';
 
 export function create(dataOrUri:any, opts:SchemaOptions = {}): Promise<Schema> {

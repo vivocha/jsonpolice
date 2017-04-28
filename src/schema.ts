@@ -53,8 +53,11 @@ export abstract class Schema {
   }
   abstract async schema(): Promise<any>;
   abstract async validate(data:any, path:string): Promise<any>;
-  protected abstract init(): void;
-  abstract default(data?: any): any;
+
+  protected init(): void {}
+  default(data?: any): any {
+    return data;
+  }
 
   static factories:{
     [type:string]: SchemaFactory
@@ -210,6 +213,16 @@ export abstract class Schema {
         return o;
       }, out);
     }
+  }
+}
+
+export abstract class DynamicSchema extends Schema {
+  async validate(data:any, path:string): Promise<any> {
+    let raw: any = await this.schema();
+    let s: Schema = Schema.create(raw, Object.assign({}, this.opts, {
+      store: Object.assign({}, this.opts.store)
+    }));
+    return s.validate(data, path);
   }
 }
 

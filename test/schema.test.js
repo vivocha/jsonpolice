@@ -3,6 +3,7 @@ const chai = require('chai')
   , should = chai.should()
   , global = require('../dist/global')
   , Schema = require('../dist/schema').Schema
+  , DynamicSchema = require('../dist/schema').DynamicSchema
   , UntypedSchema = require('../dist/schema').UntypedSchema
   , util = require('util')
 
@@ -843,4 +844,17 @@ describe('Schema', function() {
 
   });
 
+});
+
+describe('DynamicSchema', function() {
+  it('should validate a dynamic schema', function() {
+    class TestSchema extends DynamicSchema {
+      async schema() {
+        return {}
+      }
+    }
+    let s = new TestSchema({}, {});
+    s.default(5).should.equal(5);
+    return s.validate(1).should.eventually.equal(1);
+  });
 });
