@@ -52,7 +52,7 @@ export abstract class Schema {
   constructor(readonly scope:string, protected opts:SchemaOptions) {
   }
   abstract async schema(): Promise<any>;
-  abstract async validate(data:any, path:string): Promise<any>;
+  abstract async validate(data:any, path:string = ''): Promise<any>;
 
   protected init(): void {}
   default(data?: any): any {
@@ -217,7 +217,7 @@ export abstract class Schema {
 }
 
 export abstract class DynamicSchema extends Schema {
-  async validate(data:any, path:string): Promise<any> {
+  async validate(data:any, path:string = ''): Promise<any> {
     let raw: any = await this.schema();
     let s: Schema = Schema.create(raw, Object.assign({}, this.opts, {
       store: Object.assign({}, this.opts.store)
