@@ -16,7 +16,7 @@ export function create(dataOrUri:any, opts:SchemaOptions = {}): Promise<Schema> 
   if (!dataOrUri) {
     throw new SchemaError(opts.scope, 'no_data');
   }
-  if (typeof dataOrUri === 'object' && dataOrUri[__schema] instanceof Schema) {
+  if (typeof dataOrUri === 'object' && dataOrUri[__schema] && typeof dataOrUri[__schema].validate === 'function') {
     return Promise.resolve(dataOrUri[__schema]);
   } else {
     if (!opts.store) opts.store = {};
