@@ -12,21 +12,19 @@ import './schema_string';
 export { Schema, DynamicSchema } from './schema';
 export { SchemaError, ValidationError, SchemaOptions } from './global';
 
-export function create(dataOrUri:any, opts:SchemaOptions = {}): Promise<Schema> {
+export async function create(dataOrUri:any, opts:SchemaOptions = {}): Promise<Schema> {
   if (!dataOrUri) {
     throw new SchemaError(opts.scope, 'no_data');
   }
   if (typeof dataOrUri === 'object' && dataOrUri[__schema] && typeof dataOrUri[__schema].validate === 'function') {
-    return Promise.resolve(dataOrUri[__schema]);
+    return dataOrUri[__schema];
   } else {
     if (!opts.store) opts.store = {};
-    return refs.parse(dataOrUri, opts).then(function(data) {
-      return Schema.create(data, Object.assign({ store: {} }, opts));
-    });
+    let data = await refs.parse(dataOrUri, opts);
+    return Schema.create(data, Object.assign({ store: {} }, opts));
   }
 }
-export function flatten(dataOrUri:any, opts:SchemaOptions = {}) {
-  return create(dataOrUri, opts).then(function(schema) {
-    return Schema.flatten((schema as any).data);
-  });
+export async function flatten(dataOrUri:any, opts:SchemaOptions = {}) {
+  let schema = await create(dataOrUri, opts);
+  return Schema.flatten((schema as any).data);
 }
