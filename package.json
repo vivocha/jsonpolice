@@ -27,7 +27,8 @@
     "schema"
   ],
   "files": [
-    "dist",
+    "dist/**/*.js",
+    "dist/**/*.ts",
     "README.md",
     "LICENSE"
   ],
@@ -38,19 +39,19 @@
   },
   "homepage": "https://github.com/vivocha/jsonpolice#readme",
   "devDependencies": {
-    "@types/lodash": "4.14.64",
-    "chai": "3.5.0",
-    "chai-as-promised": "6.0.0",
+    "@types/lodash": "4.14.74",
+    "chai": "4.1.2",
+    "chai-as-promised": "7.1.1",
     "chai-spies": "0.7.1",
     "commitizen": "2.9.6",
     "coveralls": "2.13.1",
     "cz-conventional-changelog": "2.0.0",
-    "husky": "0.13.3",
-    "mocha": "3.3.0",
-    "nyc": "10.3.2",
+    "husky": "0.14.3",
+    "mocha": "3.5.0",
+    "nyc": "11.2.1",
     "rimraf": "2.6.1",
-    "semantic-release": "^6.3.6",
-    "typescript": "2.3.2"
+    "semantic-release": "^7.0.2",
+    "typescript": "2.5.2"
   },
   "config": {
     "commitizen": {
@@ -58,7 +59,7 @@
     }
   },
   "dependencies": {
-    "jsonref": "^4.0.0",
+    "jsonref": "^4.0.1",
     "lodash": "^4.17.4"
   }
 }
