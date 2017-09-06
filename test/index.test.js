@@ -13,9 +13,7 @@ describe('jsonpolice', function() {
   describe('create', function() {
 
     it('should throw a SchemaError when called with no args', function() {
-      should.throw(function() {
-        jp.create();
-      }, jp.SchemaError, 'no_data');
+      jp.create().should.be.rejectedWith(jp.SchemaError, 'no_data');
     });
 
     it('should create a Schema', function() {
