@@ -202,18 +202,18 @@ describe('ObjectSchema', function() {
       return s.validate({ a: 3 }).should.be.rejectedWith(global.ValidationError, 'minimum');
     });
 
-    it('should return not return the default if a value is set', function() {
+    it('should not return the default if a value is set', function() {
       let data = s.validate({ a: 1, b: true, c: 'hi' });
       return data.should.eventually.have.property('c', 'hi');
     });
 
-    it('should return not return the default if a value is not set', function() {
-      let data = s.validate({ a: 1, b: true, z: 1 });
+    it('should return the default if a value is not set', async function() {
+      let data = await s.validate({ a: 1, b: true, z: 1 });
       return Promise.all([
-        data.should.eventually.have.ownPropertyDescriptor('c').to.have.property('enumerable', false),
-        data.should.eventually.have.ownPropertyDescriptor('d').to.have.property('enumerable', false),
-        data.should.eventually.have.deep.property('c', 'test'),
-        data.should.eventually.have.deep.property('d.e', 5)
+        data.should.have.ownPropertyDescriptor('c').to.have.property('enumerable', false),
+        data.should.have.ownPropertyDescriptor('d').to.have.property('enumerable', false),
+        data.c.should.equal('test'),
+        data.d.e.should.equal(5)
       ]);
     });
 
