@@ -14,9 +14,9 @@ export { SchemaError, ValidationError, SchemaOptions } from './global';
 
 export async function create(dataOrUri:any, opts:SchemaOptions = {}): Promise<Schema> {
   if (!dataOrUri) {
-    throw new SchemaError(opts.scope, 'no_data');
+    return Promise.reject(new SchemaError(opts.scope, 'no_data'));
   }
-  if (typeof dataOrUri === 'object' && dataOrUri[__schema] && typeof dataOrUri[__schema].validate === 'function') {
+  else if (typeof dataOrUri === 'object' && dataOrUri[__schema] && typeof dataOrUri[__schema].validate === 'function') {
     return dataOrUri[__schema];
   } else {
     if (!opts.store) opts.store = {};
