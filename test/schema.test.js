@@ -856,5 +856,18 @@ describe('DynamicSchema', function() {
     let s = new TestSchema({}, {});
     s.default(5).should.equal(5);
     return s.validate(1).should.eventually.equal(1);
-  });
+  });  
+});
+
+describe('DynamicSchema', function() {
+  it('with no opts should validate a dynamic schema', function() {
+    class TestSchema extends DynamicSchema {
+      async schema() {
+        return {}
+      }
+    }
+    let s = new TestSchema({});
+    s.default(5).should.equal(5);
+    return s.validate(1).should.eventually.equal(1);
+  });  
 });

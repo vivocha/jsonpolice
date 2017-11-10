@@ -49,7 +49,7 @@ export interface SchemaFactory {
 }
 
 export abstract class Schema {
-  constructor(readonly scope:string, protected opts:SchemaOptions) {
+  constructor(readonly scope:string, protected opts:SchemaOptions = {}) {
   }
   abstract async schema(): Promise<any>;
   abstract async validate(data:any, path?:string): Promise<any>;
