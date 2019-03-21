@@ -36,11 +36,9 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
-# TypeScript typings/definitions
+#TypeScript typings/definitions
 typings
 
-# IDEs project data
-.idea
-.vscode
-
 dist
+test-results
+test/ts/*.js

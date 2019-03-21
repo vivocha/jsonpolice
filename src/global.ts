@@ -1,6 +1,6 @@
 import * as refs from 'jsonref';
+import { Schema } from './schema';
 
-export const __schema = Symbol();
 export const regexps:{
   [name:string]: RegExp
 }  = {
@@ -15,6 +15,10 @@ export const regexps:{
 export interface SchemaOptions extends refs.ParseOptions {
   removeAdditional?:boolean;
 }
+export interface SchemaMeta extends refs.Meta {
+  schema?: Schema;
+}
+
 export class SchemaError extends Error {
   constructor(public scope:string, type:string, public info?:any) {
     super(type);
@@ -22,9 +26,10 @@ export class SchemaError extends Error {
   }
 }
 export class ValidationError extends Error {
-  constructor(public path:string, public scope:string, type:string, public info?:any) {
+  constructor(public path:string, public scope:string, type:string, public errors?: Error[]) {
     super(type);
     this.name = 'ValidationError';
+    if (!this.path) this.path = '/';
   }
 }
 
