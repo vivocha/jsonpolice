@@ -1,14 +1,12 @@
 # jsonpolice
 
-A Javascript library implementing the [JSON Schema](http://json-schema.org/documentation.html) specifications.
-Version 4 (draft) of the specification is supported by default, additional versions can be registered via the
-addVersion function.
+A Javascript library implementing the [JSON Schema](http://json-schema.org/documentation.html) draft 7.
 
-The library decorates parsed objects in order to have them return default values defined the in the schema, for
+The library can optionally decorate parsed objects in order to have them return default values defined in the schema, for
 undefined properties.
 
 [![travis build](https://img.shields.io/travis/vivocha/jsonpolice.svg)](https://travis-ci.org/vivocha/jsonpolice)
-[![codecov coverage](https://img.shields.io/codecov/c/github/vivocha/jsonpolice.svg)](https://codecov.io/gh/vivocha/jsonpolice)
+[![Coverage Status](https://coveralls.io/repos/github/vivocha/jsonpolice/badge.svg?branch=master)](https://coveralls.io/github/vivocha/jsonpolice?branch=master)
 [![npm version](https://img.shields.io/npm/v/jsonpolice.svg)](https://www.npmjs.com/package/jsonpolice)
 
 ## Install
@@ -17,15 +15,15 @@ undefined properties.
 $ npm install jsonpolice
 ```
 
-## create(dataOrUri _[, options]_)
+## create(dataOrUri, options)
 
 Create a new instance of schema validator.
 
 * `dataOrUri`, the schema to parse or a fully qualified URI to pass to `retriever` to download the schema
-* `options` (optional), parsing options, the following optional properties are supported:
-  * `scope`, the current resolution scope (base href) of URLs and paths.
-  * `store`, an object to use to cache resolved `id`  and `$ref` values. If no store is passed,
-one is automatically created. Pass a `store` if you are going to parse several schemas or URIs referencing
+* `options`, parsing options, the following optional properties are supported:
+  * `scope` (required), the current resolution scope (absolute URL) of URLs and paths.
+  * `registry`, an object to use to cache resolved `id`  and `$ref` values. If no registry is passed,
+one is automatically created. Pass a `registry` if you are going to parse several schemas or URIs referencing
 the same `id` and `$ref` values.
   * `retriever`, a function accepting a URL in input and returning a promise resolved to an object
 representing the data downloaded for the URI. Whenever a `$ref` to a new URI is found, if the URI is not
@@ -33,9 +31,6 @@ already cached in the store in use, it'll be fetched using this `retriever`. If 
 and a URI needs to be downloaded, a `no_retriever` exception is thrown. Refer to the documentation of
 [jsonref](https://github.com/vivocha/jsonref) for sample retriever functions to use in the browser or
 with Node.js.
- * `removeAdditional`, if `true` unknown properties are filtered out. Unknown properties are properties
-not passing the validation of none of `properties`, `patternProperties` and `additionalProperties`) If
-omitted or set to `false`, an unknown property triggers a ValidationError.
 
 The function returns a Promise resolving to a new instance of Schema. Once created, a schema instance can be used
 repeatedly to validate data, calling the method `Schema.validate`.
@@ -43,56 +38,53 @@ repeatedly to validate data, calling the method `Schema.validate`.
 ### Example
 
 ```javascript
-var jsonpolice = require('jsonpolice');
+import * as jp from 'jsonpolice';
 
-jsonpolice.create({
-  type: 'object',
-  properties: {
-    d: {
-      type: 'string',
-      format: 'date-time'
-    },
-    i: {
-      type: 'integer'
-    },
-    b: {
-      type: [ 'boolean', 'number' ]
-    },
-    c: {
-      default: 5
+(async () => {
+
+  const schema = jp.create({
+    type: 'object',
+    properties: {
+      d: {
+        type: 'string',
+        format: 'date-time'
+      },
+      i: {
+        type: 'integer'
+      },
+      b: {
+        type: [ 'boolean', 'number' ]
+      },
+      c: {
+        default: 5
+      }
     }
+  });
+  
+  try {
+    const result = await schema.validate({
+      d: (new Date()).toISOString(),
+      i: 6,
+      b: true
+    });
+  } catch(err) {
+    // validation failed
   }
-}).then(function(schema) {
-  console.log(schema.validate({
-    d: (new Date()).toISOString(),
-    i: 6,
-    b: true
-  }));
-});
+
+})();
 ```
 
-## Schema.validate(data)
+## Schema.validate(data _[, options]_)
 
 Validates the input data
 
 * `data`, the data to parse
+* `options`, validation options, the following optional properties are supported:
+  * `setDefault`, if `true` returns the default value specified in the schema (if any) for undefined properties
+  * `removeAdditional`, if `true` deletes properties not validating against additionalProperties, without failing 
+  * `context`, if set to `read` deletes writeOnly properties, if set to `write` delete readOnly properties
 
-Returns a decorated version of data, that returns default values of undefined properties, according to the
-schema used to validate the data. Throws a ValidationError exception in case an error is encountered.
-
-Additionally, type coercion is applied when possible and needed, as described in the following table:
-
-| Type | Format | Input type | Output type | Conversion |
-| --- | --- | --- | --- | --- |
-| string | date-time | string | Date | output = new Date(input) |
-| number | | string | number | output = +input |
-| boolean | | string | boolean | true if "true" or "1", false if "false" or "0" |
-| Array | | string | Array | output = input.split(',') |
-
-For arrays, the library supports coercion from strings using by the default the comma-separated format (csv).
-Similarly to the [OpenAPI specification (Swagger)](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#parameter-object),
-it's possible to specify a different format using the `collectionFormat` property: the supported formats are
-`csv`, `ssv`, `tsv` and `pipes`.
+Returns a decorated version of data, according to the specified options.
 
 ### Example
 
@@ -104,7 +96,6 @@ Using the following schema:
   properties: {
     d: {
       type: 'string',
-      format: 'date-time'
     },
     i: {
       type: 'integer'
@@ -123,10 +114,9 @@ And parsing the following data:
 
 ```javascript
 var output = schema.validate({
-  d: '2016-03-18T16:33:46.651Z',
-  i: '10',
-  b: '1',
-  a: "5,7"
+  d: 'test',
+  i: 10,
+  b: true
 });
 ```
 
@@ -134,15 +124,9 @@ Produces the following output:
 
 ```javascript
 {
-  "d": "2016-03-18T16:33:46.651Z",
+  "d": "test",
   "i": 10,
   "b": true,
-  "a": [
-    5,
-    7
-  ]
+  "c": 5
 }
-
-output.c === 5; // true
-result.d instanceof Date; // true
 ```

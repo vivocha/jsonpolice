@@ -1,10 +1,9 @@
 import * as refs from 'jsonref';
 import * as _ from 'lodash';
-import { SchemaError, SchemaOptions, testRegExp, ValidationError } from "./global";
+import { SchemaError, SchemaOptions, testRegExp, ValidationError, ValidationOptions } from "./global";
 
 export abstract class Schema {
   protected _validators: Set<string>;
-  //protected _annotators: Set<string>;
 
   abstract spec(): Promise<any>;
 
@@ -46,27 +45,15 @@ export abstract class Schema {
     }
     return this._validators;
   }
-  /*
-  protected get annotators(): Set<string> {
-    if (!this._annotators) {
-      this._annotators = new Set([
-        'title',
-        'description',
-        'default',
-        'readOnly',
-        'writeOnly',
-        'examples'
-      ]);
-    }
-    return this._annotators;
-  }
-  */
 
-  async validate(data: any): Promise<boolean> {
+  async validate(data: any, opts: ValidationOptions = {}): Promise<any> {
     const spec = await this.spec();
-    return this.rootValidator(data, spec, '', true);
+    return this.rootValidator(data, spec, '', opts);
   }
-  protected rootValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected rootValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    if (typeof data === 'undefined' && !opts.doNotAnnotate && opts.setDefault) {
+      data = this.default(spec, path);
+    }
     if (typeof spec === 'boolean') {
       if (spec) {
         return spec;
@@ -75,28 +62,18 @@ export abstract class Schema {
       }
     }
 
+    let out: any = data;
     const toAnnotate: string[] = [];
     const errors: Error[] = [];
     for (let i in spec) {
       if (this.validators.has(i)) {
         try {
-          this[`${i}Validator`](data, spec, `${path}/${i}`, annotate);
+          out = this[`${i}Validator`](out, spec, `${path}/${i}`, opts);
         } catch(err) {
           errors.push(err);
         }
-      } /*else if (annotate && this.annotators.has(i)) {
-        toAnnotate.push(i);
-      }*/
-    }
-    /*
-    if (annotate) {
-      for (let i of toAnnotate) {
-        try {
-          this[`${i}Annotator`](data, spec, `${path}/${i}`);
-        } catch(err) {}
       }
     }
-    */
     if (errors.length) {
       if (errors.length === 1 && errors[0] instanceof ValidationError) {
         throw errors[0];
@@ -104,10 +81,10 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'schema', errors);
       }
     }
-    return true;
+    return out;
   }
 
-  protected typeValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected typeValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     const types: string[] = Array.isArray(spec.type) ? [ ...spec.type ] : [ spec.type ];
     let t: string, found: boolean = false;
 
@@ -141,25 +118,25 @@ export abstract class Schema {
     if (!found) {
       throw new ValidationError(path, Schema.scope(spec), 'type');
     }
-    return true;
+    return data;
   }
-  protected enumValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected enumValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.enum) || spec.enum.length < 1) {
       throw Schema.error(spec, 'enum');
     } else if (!spec.enum.find(v => _.isEqual(v, data))) {
       throw new ValidationError(path, Schema.scope(spec), 'enum');
     }
-    return true;
+    return data;
   }
-  protected constValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected constValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof spec.const === 'undefined') {
       throw Schema.error(spec, 'const');
     } else if (!_.isEqual(spec.const, data)) {
       throw new ValidationError(path, Schema.scope(spec), 'const');
     }
-    return true;
+    return data;
   }
-  protected multipleOfValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected multipleOfValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'number') {
       if (typeof spec.multipleOf !== 'number') {
         throw Schema.error(spec, 'multipleOf');
@@ -167,9 +144,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'multipleOf');
       }
     }
-    return true;
+    return data;
   }
-  protected maximumValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected maximumValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'number') {
       if (typeof spec.maximum !== 'number') {
         throw Schema.error(spec, 'maximum');
@@ -177,9 +154,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'maximum');
       }
     }
-    return true;
+    return data;
   }
-  protected exclusiveMaximumValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected exclusiveMaximumValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'number') {
       if (typeof spec.exclusiveMaximum !== 'number') {
         throw Schema.error(spec, 'exclusiveMaximum');
@@ -187,9 +164,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'exclusiveMaximum');
       }
     }
-    return true;
+    return data;
   }
-  protected minimumValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected minimumValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'number') {
       if (typeof spec.minimum !== 'number') {
         throw Schema.error(spec, 'minimum');
@@ -197,9 +174,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'minimum');
       }
     }
-    return true;
+    return data;
   }
-  protected exclusiveMinimumValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected exclusiveMinimumValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'number') {
       if (typeof spec.exclusiveMinimum !== 'number') {
         throw Schema.error(spec, 'exclusiveMinimum');
@@ -207,9 +184,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'exclusiveMinimum');
       }
     }
-    return true;
+    return data;
   }
-  protected maxLengthValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected maxLengthValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'string') {
       if (typeof spec.maxLength !== 'number') {
         throw Schema.error(spec, 'maxLength');
@@ -217,9 +194,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'maxLength');
       }
     }
-    return true;
+    return data;
   }
-  protected minLengthValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected minLengthValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'string') {
       if (typeof spec.minLength !== 'number') {
         throw Schema.error(spec, 'minLength');
@@ -227,9 +204,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'minLength');
       }
     }
-    return true;
+    return data;
   }
-  protected patternValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected patternValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'string') {
       if (typeof spec.pattern !== 'string') {
         throw Schema.error(spec, 'pattern');
@@ -237,25 +214,36 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'pattern');
       }
     }
-    return true;
+    return data;
   }
-  protected formatValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected formatValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'string') {
       if (typeof spec.format !== 'string') {
         throw Schema.error(spec, 'format');
       }
       // TODO validate format
     }
-    return true;
+    return data;
   }
-  protected itemsValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected itemsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data)) {
       const errors: Error[] = [];
-      for (let i = 0 ; i < data.length ; i++) {
-        const subSpec = Array.isArray(spec.items) ? spec.items[i] : spec.items;
-        if (typeof subSpec !== 'undefined') {
+      if (Array.isArray(spec.items)) {
+        for (let i = 0 ; i < spec.items.length ; i++) {
+          const subSpec = spec.items[i];
+          if (typeof subSpec !== 'undefined') {
+            try {
+              data[i] = this.rootValidator(data[i], spec.items[i], `${path}/${i}`, opts);
+            } catch(err) {
+              errors.push(err);
+            }
+          }
+        }
+
+      } else {
+        for (let i = 0 ; i < data.length ; i++) {
           try {
-            this.rootValidator(data[i], subSpec, `${path}/${i}`, annotate);
+            data[i] = this.rootValidator(data[i], spec.items, `${path}/${i}`, opts);
           } catch(err) {
             errors.push(err);
           }
@@ -265,15 +253,15 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'items', errors);
       }
     }
-    return true;
+    return data;
   }
-  protected additionalItemsValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected additionalItemsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data) && Array.isArray(spec.items)) {
       const errors: Error[] = [];
       for (let i = 0 ; i < data.length ; i++) {
         if (typeof spec.items[i] === 'undefined') {
           try {
-            this.rootValidator(data[i], spec.additionalItems, `${path}/${i}`, annotate);
+            data[i] = this.rootValidator(data[i], spec.additionalItems, `${path}/${i}`, opts);
           } catch(err) {
             errors.push(err);
           }
@@ -283,9 +271,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'additionalItems', errors);
       }
     }
-    return true;
+    return data;
   }
-  protected maxItemsValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected maxItemsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data)) {
       if (typeof spec.maxItems !== 'number') {
         throw Schema.error(spec, 'maxItems');
@@ -293,9 +281,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'maxItems');
       }
     }
-    return true;
+    return data;
   }
-  protected minItemsValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected minItemsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data)) {
       if (typeof spec.minItems !== 'number') {
         throw Schema.error(spec, 'minItems');
@@ -303,9 +291,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'minItems');
       }
     }
-    return true;
+    return data;
   }
-  protected uniqueItemsValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected uniqueItemsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data)) {
       if (typeof spec.uniqueItems !== 'boolean') {
         throw Schema.error(spec, 'uniqueItems');
@@ -313,14 +301,14 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'uniqueItems');
       }
     }
-    return true;
+    return data;
   }
-  protected containsValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected containsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data)) {
       let found = false;
       for (let i = 0 ; i < data.length ; i++) {
         try {
-          this.rootValidator(data[i], spec.contains, `${path}/${i}`, annotate);
+          data[i] = this.rootValidator(data[i], spec.contains, `${path}/${i}`, opts);
           found = true;
         } catch(err) { }
       }
@@ -328,9 +316,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'contains');
       }
     }
-    return true;
+    return data;
   }
-  protected maxPropertiesValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected maxPropertiesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       if (typeof spec.maxProperties !== 'number') {
         throw Schema.error(spec, 'maxProperties');
@@ -338,9 +326,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'maxProperties');
       }
     }
-    return true;
+    return data;
   }
-  protected minPropertiesValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected minPropertiesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       if (typeof spec.minProperties !== 'number') {
         throw Schema.error(spec, 'minProperties');
@@ -348,9 +336,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'minProperties');
       }
     }
-    return true;
+    return data;
   }
-  protected requiredValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected requiredValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       if (!Array.isArray(spec.required)) {
         throw Schema.error(spec, 'required');
@@ -363,9 +351,9 @@ export abstract class Schema {
         }
       }
     }
-    return true;
+    return data;
   }
-  protected propertiesValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected propertiesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       if (spec.properties === null || typeof spec.properties !== 'object' || Array.isArray(spec.properties)) {
         throw Schema.error(spec, 'properties');
@@ -374,7 +362,16 @@ export abstract class Schema {
       for (let i in spec.properties) {
         try {
           if (i in data) {
-            this.rootValidator(data[i], spec.properties[i], `${path}/${i}`, annotate);
+            if ((opts.context === 'write' && spec.properties[i].readOnly === true) || (opts.context === 'read' && spec.properties[i].writeOnly === true)) {
+              delete data[i];
+            } else {
+              data[i] = this.rootValidator(data[i], spec.properties[i], `${path}/${i}`, opts);
+            }
+          } else if (opts.setDefault) {
+            const def = this.default(spec.properties[i], `${path}/${i}`);
+            if (typeof def !== 'undefined') {
+              data[i] = def;
+            }
           }
         } catch(err) {
           errors.push(err);
@@ -384,9 +381,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'properties', errors);
       }
     }
-    return true;
+    return data;
   }
-  protected patternPropertiesValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected patternPropertiesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       if (spec.patternProperties === null || typeof spec.patternProperties !== 'object' || Array.isArray(spec.patternProperties)) {
         throw Schema.error(spec, 'patternProperties');
@@ -396,7 +393,11 @@ export abstract class Schema {
         for (let p in spec.patternProperties) {
           if (testRegExp(p, i)) {
             try {
-              this.rootValidator(data[i], spec.patternProperties[p], `${path}/${i}`, annotate);
+              if ((opts.context === 'write' && spec.patternProperties[p].readOnly === true) || (opts.context === 'read' && spec.patternProperties[p].writeOnly === true)) {
+                delete data[i];
+              } else {  
+                data[i] = this.rootValidator(data[i], spec.patternProperties[p], `${path}/${i}`, opts);
+              }
             } catch(err) {
               errors.push(err);
             }
@@ -407,17 +408,25 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'patternProperties', errors);
       }
     }
-    return true;
+    return data;
   }
-  protected additionalPropertiesValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected additionalPropertiesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       const errors: Error[] = [];
       for (let i in data) {
         if ((!spec.properties || !spec.properties[i]) && (!spec.patternProperties || !Object.keys(spec.patternProperties).find(p => testRegExp(p, i)))) {
           try {
-            this.rootValidator(data[i], spec.additionalProperties, `${path}/${i}`, annotate);
+            if ((opts.context === 'write' && spec.additionalProperties.readOnly === true) || (opts.context === 'read' && spec.additionalProperties.writeOnly === true)) {
+              delete data[i];
+            } else {
+              data[i] = this.rootValidator(data[i], spec.additionalProperties, `${path}/${i}`, opts);
+            }
           } catch(err) {
-            errors.push(err);
+            if (opts.removeAdditional) {
+              delete data[i];
+            } else {
+              errors.push(err);
+            }
           }
         }
       }
@@ -425,9 +434,9 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'additionalProperties', errors);
       }
     }
-    return true;
+    return data;
   }
-  protected dependenciesValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected dependenciesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       if (spec.dependencies === null || typeof spec.dependencies !== 'object' || Array.isArray(spec.dependencies)) {
         throw Schema.error(spec, 'dependencies');
@@ -445,7 +454,7 @@ export abstract class Schema {
             }
           } else {
             try {
-              this.rootValidator(data, spec.dependencies[i], `${path}/dependencies/${i}`, annotate);
+              data = this.rootValidator(data, spec.dependencies[i], `${path}/dependencies/${i}`, opts);
             } catch(err) {
               errors.push(err);
             }
@@ -456,14 +465,15 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'dependencies', errors);
       }
     }
-    return true;
+    return data;
   }
-  protected propertyNamesValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected propertyNamesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       const errors: Error[] = [];
       for (let i in data) {
         try {
-          this.rootValidator(i, spec.propertyNames, `${path}/${i}#`, annotate);
+          // TODO should we change the key in data to reflect the result?
+          this.rootValidator(i, spec.propertyNames, `${path}/${i}#`, opts);
         } catch(err) {
           errors.push(err);
         }
@@ -472,30 +482,30 @@ export abstract class Schema {
         throw new ValidationError(path, Schema.scope(spec), 'propertyNames', errors);
       }
     }
-    return true;
+    return data;
   }
-  protected ifValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected ifValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     try {
-      this.rootValidator(data, spec.if, path, annotate);
+      data = this.rootValidator(data, spec.if, path, opts);
     } catch(err) {
       if (spec.else) {
-        this.rootValidator(data, spec.else, path, annotate);
+        data = this.rootValidator(data, spec.else, path, opts);
       }
-      return true;
+      return data;
     }
     if (spec.then) {
-      this.rootValidator(data, spec.then, path, annotate);
+      data = this.rootValidator(data, spec.then, path, opts);
     }
-    return true;
+    return data;
   }
-  protected allOfValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected allOfValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.allOf)) {
       throw Schema.error(spec, 'allOf');
     }
     const errors: Error[] = [];
     for (let i of spec.allOf) {
       try {
-        this.rootValidator(data, i, path, annotate);
+        data = this.rootValidator(data, i, path, opts);
       } catch(err) {
         errors.push(err);
       }
@@ -503,69 +513,54 @@ export abstract class Schema {
     if (errors.length) {
       throw new ValidationError(path, Schema.scope(spec), 'allOf', errors);
     }
-    return true;
+    return data;
   }
-  protected anyOfValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected anyOfValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.anyOf)) {
       throw Schema.error(spec, 'anyOf');
     }
     let found = false;
     for (let i of spec.anyOf) {
       try {
-        this.rootValidator(data, i, path, annotate);
+        data = this.rootValidator(data, i, path, opts);
         found = true;
       } catch(err) { }
     }
     if (!found) {
       throw new ValidationError(path, Schema.scope(spec), 'anyOf');
     }
-    return true;
+    return data;
   }
-  protected oneOfValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected oneOfValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.oneOf)) {
       throw Schema.error(spec, 'anyOf');
     }
     let found = 0;
     for (let i of spec.oneOf) {
       try {
-        this.rootValidator(data, i, path, annotate);
-        found++;
+        const newData = this.rootValidator(data, i, path, opts);
+        if (++found === 1) {
+          data = newData;
+        }
       } catch(err) { }
     }
     if (found !== 1) {
       throw new ValidationError(path, Schema.scope(spec), 'oneOf');
     }
-    return true;
+    return data;
   }
-  protected notValidator(data: any, spec: any, path: string, annotate: boolean): boolean {
+  protected notValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     try {
-      this.rootValidator(data, spec.not, path, annotate);
+      this.rootValidator(data, spec.not, path, Object.assign({}, opts, { doNotAnnotate: true }));
     } catch(err) {
-      return true;
+      return data;
     }
     throw new ValidationError(path, Schema.scope(spec), 'not');
   }
 
-  /*
-  protected titleAnnotator(data: any, spec: any, path: string): boolean {
-    return false;
+  protected default(spec: any, path: string): any {
+    return spec.default;
   }
-  protected descriptionAnnotator(data: any, spec: any, path: string): boolean {
-    return false;
-  }
-  protected defaultAnnotator(data: any, spec: any, path: string): boolean {
-    return false;
-  }
-  protected readOnlyAnnotator(data: any, spec: any, path: string): boolean {
-    return false;
-  }
-  protected writeOnlyAnnotator(data: any, spec: any, path: string): boolean {
-    return false;
-  }
-  protected examplesAnnotator(data: any, spec: any, path: string): boolean {
-    return false;
-  }
-  */
 
   static scope(data: any): string {
     return refs.scope(data) || '';

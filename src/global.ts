@@ -13,10 +13,15 @@ export const regexps:{
 };
 
 export interface SchemaOptions extends refs.ParseOptions {
-  removeAdditional?:boolean;
 }
 export interface SchemaMeta extends refs.Meta {
   schema?: Schema;
+}
+export interface ValidationOptions {
+  doNotAnnotate?: boolean;
+  setDefault?: boolean
+  removeAdditional?:boolean;
+  context?: 'read'|'write';
 }
 
 export class SchemaError extends Error {
