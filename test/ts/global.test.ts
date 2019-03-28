@@ -3,6 +3,7 @@ import * as chaiAsPromised from 'chai-as-promised';
 import * as spies from 'chai-spies';
 import * as global from '../../dist/global';
 
+chai.should();
 chai.use(spies);
 chai.use(chaiAsPromised);
 

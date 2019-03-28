@@ -3,6 +3,7 @@ import * as chaiAsPromised from 'chai-as-promised';
 import * as spies from 'chai-spies';
 import * as jp from '../../dist/index';
 
+chai.should();
 chai.use(spies);
 chai.use(chaiAsPromised);
 
