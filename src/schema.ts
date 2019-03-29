@@ -50,20 +50,23 @@ export abstract class Schema {
 
   async validate(data: any, opts: ValidationOptions = {}, path = ''): Promise<any> {
     const spec = await this.spec();
-    return this.rootValidator(data, spec, path, opts);
+    return this.validateSpec(Schema.scope(spec), data, spec, path, opts);
   }
+
+  protected validateSpec(scope: string, data: any, spec: any, path: string, opts: ValidationOptions): any {
+    if (spec === true) {
+      return true;
+    } else if (spec === false) {
+      throw new ValidationError(path, scope, 'false');
+    } else {
+      return this.rootValidator(data, spec, path, opts);
+    }
+  }
+
   protected rootValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'undefined' && !opts.doNotAnnotate && opts.setDefault) {
       data = this.default(spec, path);
     }
-    if (typeof spec === 'boolean') {
-      if (spec) {
-        return spec;
-      } else {
-        throw new ValidationError(path, Schema.scope(spec), 'false');
-      }
-    }
-
     let out: any = data;
     const toAnnotate: string[] = [];
     const errors: Error[] = [];
@@ -235,7 +238,7 @@ export abstract class Schema {
           const subSpec = spec.items[i];
           if (typeof subSpec !== 'undefined') {
             try {
-              data[i] = this.rootValidator(data[i], spec.items[i], `${path}/${i}`, opts);
+              data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.items[i], `${path}/${i}`, opts);
             } catch(err) {
               errors.push(err);
             }
@@ -245,7 +248,7 @@ export abstract class Schema {
       } else {
         for (let i = 0 ; i < data.length ; i++) {
           try {
-            data[i] = this.rootValidator(data[i], spec.items, `${path}/${i}`, opts);
+            data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.items, `${path}/${i}`, opts);
           } catch(err) {
             errors.push(err);
           }
@@ -263,7 +266,7 @@ export abstract class Schema {
       for (let i = 0 ; i < data.length ; i++) {
         if (typeof spec.items[i] === 'undefined') {
           try {
-            data[i] = this.rootValidator(data[i], spec.additionalItems, `${path}/${i}`, opts);
+            data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.additionalItems, `${path}/${i}`, opts);
           } catch(err) {
             errors.push(err);
           }
@@ -310,7 +313,7 @@ export abstract class Schema {
       let found = false;
       for (let i = 0 ; i < data.length ; i++) {
         try {
-          data[i] = this.rootValidator(data[i], spec.contains, `${path}/${i}`, opts);
+          data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.contains, `${path}/${i}`, opts);
           found = true;
         } catch(err) { }
       }
@@ -367,7 +370,7 @@ export abstract class Schema {
             if ((opts.context === 'write' && spec.properties[i].readOnly === true) || (opts.context === 'read' && spec.properties[i].writeOnly === true)) {
               delete data[i];
             } else {
-              data[i] = this.rootValidator(data[i], spec.properties[i], `${path}/${i}`, opts);
+              data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.properties[i], `${path}/${i}`, opts);
             }
           } else if (opts.setDefault) {
             const def = this.default(spec.properties[i], `${path}/${i}`);
@@ -398,7 +401,7 @@ export abstract class Schema {
               if ((opts.context === 'write' && spec.patternProperties[p].readOnly === true) || (opts.context === 'read' && spec.patternProperties[p].writeOnly === true)) {
                 delete data[i];
               } else {  
-                data[i] = this.rootValidator(data[i], spec.patternProperties[p], `${path}/${i}`, opts);
+                data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.patternProperties[p], `${path}/${i}`, opts);
               }
             } catch(err) {
               errors.push(err);
@@ -421,7 +424,7 @@ export abstract class Schema {
             if ((opts.context === 'write' && spec.additionalProperties.readOnly === true) || (opts.context === 'read' && spec.additionalProperties.writeOnly === true)) {
               delete data[i];
             } else {
-              data[i] = this.rootValidator(data[i], spec.additionalProperties, `${path}/${i}`, opts);
+              data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.additionalProperties, `${path}/${i}`, opts);
             }
           } catch(err) {
             if (opts.removeAdditional) {
@@ -456,7 +459,7 @@ export abstract class Schema {
             }
           } else {
             try {
-              data = this.rootValidator(data, spec.dependencies[i], `${path}/dependencies/${i}`, opts);
+              data = this.validateSpec(Schema.scope(spec), data, spec.dependencies[i], `${path}/dependencies/${i}`, opts);
             } catch(err) {
               errors.push(err);
             }
@@ -475,7 +478,7 @@ export abstract class Schema {
       for (let i in data) {
         try {
           // TODO should we change the key in data to reflect the result?
-          this.rootValidator(i, spec.propertyNames, `${path}/${i}#`, opts);
+          this.validateSpec(Schema.scope(spec), i, spec.propertyNames, `${path}/${i}#`, opts);
         } catch(err) {
           errors.push(err);
         }
@@ -488,15 +491,15 @@ export abstract class Schema {
   }
   protected ifValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     try {
-      data = this.rootValidator(data, spec.if, path, opts);
+      data = this.validateSpec(Schema.scope(spec), data, spec.if, path, opts);
     } catch(err) {
       if (spec.else) {
-        data = this.rootValidator(data, spec.else, path, opts);
+        data = this.validateSpec(Schema.scope(spec), data, spec.else, path, opts);
       }
       return data;
     }
     if (spec.then) {
-      data = this.rootValidator(data, spec.then, path, opts);
+      data = this.validateSpec(Schema.scope(spec), data, spec.then, path, opts);
     }
     return data;
   }
@@ -507,7 +510,7 @@ export abstract class Schema {
     const errors: Error[] = [];
     for (let i of spec.allOf) {
       try {
-        data = this.rootValidator(data, i, path, opts);
+        data = this.validateSpec(Schema.scope(spec), data, i, path, opts);
       } catch(err) {
         errors.push(err);
       }
@@ -524,7 +527,7 @@ export abstract class Schema {
     let found = false;
     for (let i of spec.anyOf) {
       try {
-        data = this.rootValidator(data, i, path, opts);
+        data = this.validateSpec(Schema.scope(spec), data, i, path, opts);
         found = true;
       } catch(err) { }
     }
@@ -540,7 +543,7 @@ export abstract class Schema {
     let found = 0;
     for (let i of spec.oneOf) {
       try {
-        const newData = this.rootValidator(data, i, path, opts);
+        const newData = this.validateSpec(Schema.scope(spec), data, i, path, opts);
         if (++found === 1) {
           data = newData;
         }
@@ -553,7 +556,7 @@ export abstract class Schema {
   }
   protected notValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     try {
-      this.rootValidator(data, spec.not, path, Object.assign({}, opts, { doNotAnnotate: true }));
+      this.validateSpec(Schema.scope(spec), data, spec.not, path, Object.assign({}, opts, { doNotAnnotate: true }));
     } catch(err) {
       return data;
     }
