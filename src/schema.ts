@@ -1,6 +1,8 @@
 import * as refs from 'jsonref';
 import * as _ from 'lodash';
-import { SchemaError, SchemaOptions, testRegExp, ValidationError, ValidationOptions } from "./global";
+import { SchemaError, ValidationError } from './errors';
+import { SchemaOptions, ValidationOptions } from './types';
+import { testRegExp } from './utils';
 
 export abstract class Schema {
   protected _validators: Set<string>;
@@ -46,9 +48,9 @@ export abstract class Schema {
     return this._validators;
   }
 
-  async validate(data: any, opts: ValidationOptions = {}): Promise<any> {
+  async validate(data: any, opts: ValidationOptions = {}, path = ''): Promise<any> {
     const spec = await this.spec();
-    return this.rootValidator(data, spec, '', opts);
+    return this.rootValidator(data, spec, path, opts);
   }
   protected rootValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (typeof data === 'undefined' && !opts.doNotAnnotate && opts.setDefault) {
@@ -68,17 +70,17 @@ export abstract class Schema {
     for (let i in spec) {
       if (this.validators.has(i)) {
         try {
-          out = this[`${i}Validator`](out, spec, `${path}/${i}`, opts);
+          out = this[`${i}Validator`](out, spec, path, opts);
         } catch(err) {
           errors.push(err);
         }
       }
     }
     if (errors.length) {
-      if (errors.length === 1 && errors[0] instanceof ValidationError) {
+      if (errors.length === 1) {
         throw errors[0];
       } else {
-        throw new ValidationError(path, Schema.scope(spec), 'schema', errors);
+        throw new ValidationError(path, Schema.scope(spec), 'multiple', errors);
       }
     }
     return out;
@@ -533,7 +535,7 @@ export abstract class Schema {
   }
   protected oneOfValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.oneOf)) {
-      throw Schema.error(spec, 'anyOf');
+      throw Schema.error(spec, 'oneOf');
     }
     let found = 0;
     for (let i of spec.oneOf) {

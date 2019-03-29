@@ -76,7 +76,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           type: 'foo'
         }, { scope: 'http://example.com' });
-        return schema.validate({}).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate({}).should.be.rejectedWith(jp.SchemaError, 'type');
       });
     });
     describe('enum', async function() {
@@ -84,11 +84,11 @@ describe('Schema', function() {
         const schema1 = await jp.create({
           enum: true
         }, { scope: 'http://example.com' });
-        await schema1.validate(true).should.be.rejectedWith(jp.ValidationError, 'schema');
+        await schema1.validate(true).should.be.rejectedWith(jp.SchemaError, 'enum');
         const schema2 = await jp.create({
           enum: []
         }, { scope: 'http://example.com' });
-        return schema2.validate(true).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema2.validate(true).should.be.rejectedWith(jp.SchemaError, 'enum');
       });
       it('should validate with enum', async function() {
         const schema = await jp.create({
@@ -104,7 +104,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           const: undefined
         }, { scope: 'http://example.com' });
-        return schema.validate(true).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate(true).should.be.rejectedWith(jp.SchemaError, 'const');
       });
       it('should validate with const', async function() {
         const schema = await jp.create({
@@ -119,7 +119,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           multipleOf: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate(10).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate(10).should.be.rejectedWith(jp.SchemaError, 'multipleOf');
       });
       it('should validate with multipleOf', async function() {
         const schema = await jp.create({
@@ -134,7 +134,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           maximum: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate(10).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate(10).should.be.rejectedWith(jp.SchemaError, 'maximum');
       });
       it('should validate with maximum', async function() {
         const schema = await jp.create({
@@ -150,7 +150,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           exclusiveMaximum: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate(10).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate(10).should.be.rejectedWith(jp.SchemaError, 'exclusiveMaximum');
       });
       it('should validate with exclusiveMaximum', async function() {
         const schema = await jp.create({
@@ -166,7 +166,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           minimum: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate(10).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate(10).should.be.rejectedWith(jp.SchemaError, 'minimum');
       });
       it('should validate with minimum', async function() {
         const schema = await jp.create({
@@ -182,7 +182,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           exclusiveMinimum: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate(10).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate(10).should.be.rejectedWith(jp.SchemaError, 'exclusiveMinimum');
       });
       it('should validate with exclusiveMinimum', async function() {
         const schema = await jp.create({
@@ -198,7 +198,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           maxLength: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate('abc').should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate('abc').should.be.rejectedWith(jp.SchemaError, 'maxLength');
       });
       it('should validate with maxLength', async function() {
         const schema = await jp.create({
@@ -213,7 +213,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           minLength: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate('abc').should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate('abc').should.be.rejectedWith(jp.SchemaError, 'minLength');
       });
       it('should validate with minLength', async function() {
         const schema = await jp.create({
@@ -228,7 +228,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           pattern: 10
         }, { scope: 'http://example.com' });
-        return schema.validate('abc').should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate('abc').should.be.rejectedWith(jp.SchemaError, 'pattern');
       });
       it('should validate with pattern', async function() {
         const schema = await jp.create({
@@ -243,7 +243,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           format: 10
         }, { scope: 'http://example.com' });
-        return schema.validate('abc').should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate('abc').should.be.rejectedWith(jp.SchemaError, 'format');
       });
       it('should validate with format', async function() {
         const schema = await jp.create({
@@ -332,7 +332,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           maxItems: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate([ 'abc' ]).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate([ 'abc' ]).should.be.rejectedWith(jp.SchemaError, 'maxItems');
       });
       it('should validate with maxItems', async function() {
         const schema = await jp.create({
@@ -348,7 +348,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           minItems: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate([ 'abc' ]).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate([ 'abc' ]).should.be.rejectedWith(jp.SchemaError, 'minItems');
       });
       it('should validate with minItems', async function() {
         const schema = await jp.create({
@@ -364,7 +364,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           uniqueItems: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate([ 'abc' ]).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate([ 'abc' ]).should.be.rejectedWith(jp.SchemaError, 'uniqueItems');
       });
       it('should validate with uniqueItems', async function() {
         const schema = await jp.create({
@@ -391,7 +391,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           maxProperties: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'maxProperties');
       });
       it('should validate with maxProperties', async function() {
         const schema = await jp.create({
@@ -407,7 +407,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           minProperties: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'minProperties');
       });
       it('should validate with minProperties', async function() {
         const schema = await jp.create({
@@ -423,11 +423,11 @@ describe('Schema', function() {
         const schema1 = await jp.create({
           required: 'test'
         }, { scope: 'http://example.com' });
-        await schema1.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        await schema1.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'required');
         const schema2 = await jp.create({
           required: [ 1 ]
         }, { scope: 'http://example.com' });
-        return schema2.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema2.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'required');
       });
       it('should validate with required', async function() {
         const schema = await jp.create({
@@ -443,11 +443,11 @@ describe('Schema', function() {
         const schema1 = await jp.create({
           properties: 'test'
         }, { scope: 'http://example.com' });
-        await schema1.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        await schema1.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'properties');
         const schema2 = await jp.create({
           properties: [ 1 ]
         }, { scope: 'http://example.com' });
-        return schema2.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema2.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'properties');
       });
       it('should validate with properties', async function() {
         const schema = await jp.create({
@@ -488,11 +488,11 @@ describe('Schema', function() {
         const schema1 = await jp.create({
           patternProperties: 'test'
         }, { scope: 'http://example.com' });
-        await schema1.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        await schema1.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'patternProperties');
         const schema2 = await jp.create({
           patternProperties: [ 1 ]
         }, { scope: 'http://example.com' });
-        return schema2.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema2.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'patternProperties');
       });
       it('should validate with patternProperties', async function() {
         const schema = await jp.create({
@@ -613,15 +613,15 @@ describe('Schema', function() {
         const schema1 = await jp.create({
           dependencies: 'test'
         }, { scope: 'http://example.com' });
-        await schema1.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        await schema1.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'dependencies');
         const schema2 = await jp.create({
           dependencies: [ 1 ]
         }, { scope: 'http://example.com' });
-        await schema2.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        await schema2.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'dependencies');
         const schema3 = await jp.create({
           dependencies: { a : [ true ] }
         }, { scope: 'http://example.com' });
-        return schema3.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema3.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'dependencies');
       });
       it('should validate with dependencies', async function() {
         const schema = await jp.create({
@@ -705,7 +705,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           allOf: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'allOf');
       });
       it('should validate with allOf', async function() {
         const schema = await jp.create({
@@ -728,7 +728,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           anyOf: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'anyOf');
       });
       it('should validate with anyOf', async function() {
         const schema = await jp.create({
@@ -752,7 +752,7 @@ describe('Schema', function() {
         const schema = await jp.create({
           oneOf: 'test'
         }, { scope: 'http://example.com' });
-        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'schema');
+        return schema.validate({ a: 1 }).should.be.rejectedWith(jp.SchemaError, 'oneOf');
       });
       it('should validate with oneOf', async function() {
         const schema = await jp.create({
