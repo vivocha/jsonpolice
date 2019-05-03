@@ -8,7 +8,6 @@ chai.use(spies);
 chai.use(chaiAsPromised);
 
 describe('global', function() {
-
   describe('defined', function() {
     it('should return true if value is defined', function() {
       utils.defined({}).should.equal(true);
@@ -18,7 +17,7 @@ describe('global', function() {
       utils.defined({}['a']).should.equal(false);
     });
   });
-  
+
   describe('enumerableAndDefined', function() {
     it('should return true if value is enumerable and defined', function() {
       utils.enumerableAndDefined({ a: 1 }, 'a').should.equal(true);
@@ -37,12 +36,11 @@ describe('global', function() {
   });
 
   describe('testRegExp', function() {
-    it('should return true if regexp is sucessfully tested', function () {
+    it('should return true if regexp is sucessfully tested', function() {
       utils.testRegExp('^a', 'aaa').should.equal(true);
     });
-    it('should return false if regexp is unsuccessfully tested', function () {
+    it('should return false if regexp is unsuccessfully tested', function() {
       utils.testRegExp('^a', 'baa').should.equal(false);
     });
   });
-
 });

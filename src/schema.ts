@@ -55,7 +55,7 @@ export abstract class Schema {
 
   protected validateSpec(scope: string, data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (spec === true) {
-      return true;
+      return data;
     } else if (spec === false) {
       throw new ValidationError(path, scope, 'false');
     } else {
@@ -74,7 +74,7 @@ export abstract class Schema {
       if (this.validators.has(i)) {
         try {
           out = this[`${i}Validator`](out, spec, path, opts);
-        } catch(err) {
+        } catch (err) {
           errors.push(err);
         }
       }
@@ -90,34 +90,35 @@ export abstract class Schema {
   }
 
   protected typeValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
-    const types: string[] = Array.isArray(spec.type) ? [ ...spec.type ] : [ spec.type ];
-    let t: string, found: boolean = false;
+    const types: string[] = Array.isArray(spec.type) ? [...spec.type] : [spec.type];
+    let t: string,
+      found: boolean = false;
 
-    while(!found && (t = types.shift() || '')) {
-      switch(t) {
-      case 'null':
-        found = data === null;
-        break;
-      case 'boolean':
-        found = typeof data === 'boolean';
-        break;
-      case 'object':
-        found = data !== null && typeof data === 'object';
-        break;
-      case 'array':
-        found = Array.isArray(data);
-        break;
-      case 'number':
-        found = typeof data === 'number' && !isNaN(data);
-        break;
-      case 'integer':
-        found = typeof data === 'number' && !isNaN(data) && parseInt('' + data) === data;
-        break;
-      case 'string':
-        found = typeof data === 'string';
-        break;
-      default:
-        throw Schema.error(spec, 'type');
+    while (!found && (t = types.shift() || '')) {
+      switch (t) {
+        case 'null':
+          found = data === null;
+          break;
+        case 'boolean':
+          found = typeof data === 'boolean';
+          break;
+        case 'object':
+          found = data !== null && typeof data === 'object';
+          break;
+        case 'array':
+          found = Array.isArray(data);
+          break;
+        case 'number':
+          found = typeof data === 'number' && !isNaN(data);
+          break;
+        case 'integer':
+          found = typeof data === 'number' && !isNaN(data) && parseInt('' + data) === data;
+          break;
+        case 'string':
+          found = typeof data === 'string';
+          break;
+        default:
+          throw Schema.error(spec, 'type');
       }
     }
     if (!found) {
@@ -145,7 +146,7 @@ export abstract class Schema {
     if (typeof data === 'number') {
       if (typeof spec.multipleOf !== 'number') {
         throw Schema.error(spec, 'multipleOf');
-      } else if ((data % spec.multipleOf) !== 0) {
+      } else if (data % spec.multipleOf !== 0) {
         throw new ValidationError(path, Schema.scope(spec), 'multipleOf');
       }
     }
@@ -234,22 +235,21 @@ export abstract class Schema {
     if (Array.isArray(data)) {
       const errors: Error[] = [];
       if (Array.isArray(spec.items)) {
-        for (let i = 0 ; i < spec.items.length ; i++) {
+        for (let i = 0; i < spec.items.length; i++) {
           const subSpec = spec.items[i];
           if (typeof subSpec !== 'undefined') {
             try {
               data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.items[i], `${path}/${i}`, opts);
-            } catch(err) {
+            } catch (err) {
               errors.push(err);
             }
           }
         }
-
       } else {
-        for (let i = 0 ; i < data.length ; i++) {
+        for (let i = 0; i < data.length; i++) {
           try {
             data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.items, `${path}/${i}`, opts);
-          } catch(err) {
+          } catch (err) {
             errors.push(err);
           }
         }
@@ -263,11 +263,11 @@ export abstract class Schema {
   protected additionalItemsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data) && Array.isArray(spec.items)) {
       const errors: Error[] = [];
-      for (let i = 0 ; i < data.length ; i++) {
+      for (let i = 0; i < data.length; i++) {
         if (typeof spec.items[i] === 'undefined') {
           try {
             data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.additionalItems, `${path}/${i}`, opts);
-          } catch(err) {
+          } catch (err) {
             errors.push(err);
           }
         }
@@ -311,11 +311,11 @@ export abstract class Schema {
   protected containsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data)) {
       let found = false;
-      for (let i = 0 ; i < data.length ; i++) {
+      for (let i = 0; i < data.length; i++) {
         try {
           data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.contains, `${path}/${i}`, opts);
           found = true;
-        } catch(err) { }
+        } catch (err) {}
       }
       if (!found) {
         throw new ValidationError(path, Schema.scope(spec), 'contains');
@@ -378,7 +378,7 @@ export abstract class Schema {
               data[i] = def;
             }
           }
-        } catch(err) {
+        } catch (err) {
           errors.push(err);
         }
       }
@@ -398,15 +398,18 @@ export abstract class Schema {
         for (let p in spec.patternProperties) {
           if (testRegExp(p, i)) {
             try {
-              if ((opts.context === 'write' && spec.patternProperties[p].readOnly === true) || (opts.context === 'read' && spec.patternProperties[p].writeOnly === true)) {
+              if (
+                (opts.context === 'write' && spec.patternProperties[p].readOnly === true) ||
+                (opts.context === 'read' && spec.patternProperties[p].writeOnly === true)
+              ) {
                 delete data[i];
-              } else {  
+              } else {
                 data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.patternProperties[p], `${path}/${i}`, opts);
               }
-            } catch(err) {
+            } catch (err) {
               errors.push(err);
             }
-          }          
+          }
         }
       }
       if (errors.length) {
@@ -421,12 +424,15 @@ export abstract class Schema {
       for (let i in data) {
         if ((!spec.properties || !spec.properties[i]) && (!spec.patternProperties || !Object.keys(spec.patternProperties).find(p => testRegExp(p, i)))) {
           try {
-            if ((opts.context === 'write' && spec.additionalProperties.readOnly === true) || (opts.context === 'read' && spec.additionalProperties.writeOnly === true)) {
+            if (
+              (opts.context === 'write' && spec.additionalProperties.readOnly === true) ||
+              (opts.context === 'read' && spec.additionalProperties.writeOnly === true)
+            ) {
               delete data[i];
             } else {
               data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.additionalProperties, `${path}/${i}`, opts);
             }
-          } catch(err) {
+          } catch (err) {
             if (opts.removeAdditional) {
               delete data[i];
             } else {
@@ -460,7 +466,7 @@ export abstract class Schema {
           } else {
             try {
               data = this.validateSpec(Schema.scope(spec), data, spec.dependencies[i], `${path}/dependencies/${i}`, opts);
-            } catch(err) {
+            } catch (err) {
               errors.push(err);
             }
           }
@@ -479,7 +485,7 @@ export abstract class Schema {
         try {
           // TODO should we change the key in data to reflect the result?
           this.validateSpec(Schema.scope(spec), i, spec.propertyNames, `${path}/${i}#`, opts);
-        } catch(err) {
+        } catch (err) {
           errors.push(err);
         }
       }
@@ -492,7 +498,7 @@ export abstract class Schema {
   protected ifValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     try {
       data = this.validateSpec(Schema.scope(spec), data, spec.if, path, opts);
-    } catch(err) {
+    } catch (err) {
       if (spec.else) {
         data = this.validateSpec(Schema.scope(spec), data, spec.else, path, opts);
       }
@@ -511,7 +517,7 @@ export abstract class Schema {
     for (let i of spec.allOf) {
       try {
         data = this.validateSpec(Schema.scope(spec), data, i, path, opts);
-      } catch(err) {
+      } catch (err) {
         errors.push(err);
       }
     }
@@ -529,7 +535,7 @@ export abstract class Schema {
       try {
         data = this.validateSpec(Schema.scope(spec), data, i, path, opts);
         found = true;
-      } catch(err) { }
+      } catch (err) {}
     }
     if (!found) {
       throw new ValidationError(path, Schema.scope(spec), 'anyOf');
@@ -547,7 +553,7 @@ export abstract class Schema {
         if (++found === 1) {
           data = newData;
         }
-      } catch(err) { }
+      } catch (err) {}
     }
     if (found !== 1) {
       throw new ValidationError(path, Schema.scope(spec), 'oneOf');
@@ -557,7 +563,7 @@ export abstract class Schema {
   protected notValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     try {
       this.validateSpec(Schema.scope(spec), data, spec.not, path, Object.assign({}, opts, { doNotAnnotate: true }));
-    } catch(err) {
+    } catch (err) {
       return data;
     }
     throw new ValidationError(path, Schema.scope(spec), 'not');
@@ -592,8 +598,8 @@ export class StaticSchema extends Schema {
   spec(): Promise<any> {
     return this._spec;
   }
-  
-  static async create(dataOrUri:any, opts:SchemaOptions): Promise<Schema> {
+
+  static async create(dataOrUri: any, opts: SchemaOptions): Promise<Schema> {
     const schema = new StaticSchema(dataOrUri, opts);
     await schema.spec();
     return schema;
