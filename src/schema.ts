@@ -236,13 +236,10 @@ export abstract class Schema {
       const errors: Error[] = [];
       if (Array.isArray(spec.items)) {
         for (let i = 0; i < spec.items.length; i++) {
-          const subSpec = spec.items[i];
-          if (typeof subSpec !== 'undefined') {
-            try {
-              data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.items[i], `${path}/${i}`, opts);
-            } catch (err) {
-              errors.push(err);
-            }
+          try {
+            data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.items[i], `${path}/${i}`, opts);
+          } catch (err) {
+            errors.push(err);
           }
         }
       } else {
