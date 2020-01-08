@@ -351,7 +351,11 @@ export abstract class Schema {
       for (let i of spec.required) {
         if (typeof i !== 'string') {
           throw Schema.error(spec, 'required');
-        } else if (!(i in data)) {
+        } else if (
+          !(i in data) &&
+          (typeof spec.properties?.[i]?.readOnly === 'undefined' || (spec.properties[i].readOnly === true && opts.context !== 'write')) &&
+          (typeof spec.properties?.[i]?.writeOnly === 'undefined' || (spec.properties[i].writeOnly === true && opts.context !== 'read'))
+        ) {
           throw new ValidationError(`${path}/${i}`, Schema.scope(spec), 'required');
         }
       }
