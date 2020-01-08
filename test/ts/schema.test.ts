@@ -172,6 +172,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate(15).should.eventually.equal(15);
+        await schema.validate('15').should.eventually.equal('15');
         return schema.validate(11).should.be.rejectedWith(jp.ValidationError, 'multipleOf');
       });
     });
@@ -215,6 +216,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate(2).should.eventually.equal(2);
+        await schema.validate('2').should.eventually.equal('2');
         await schema.validate(3).should.be.rejectedWith(jp.ValidationError, 'exclusiveMaximum');
         return schema.validate(4).should.be.rejectedWith(jp.ValidationError, 'exclusiveMaximum');
       });
@@ -238,6 +240,7 @@ describe('Schema', function() {
         );
         await schema.validate(4).should.eventually.equal(4);
         await schema.validate(3).should.eventually.equal(3);
+        await schema.validate('4').should.eventually.equal('4');
         return schema.validate(2).should.be.rejectedWith(jp.ValidationError, 'minimum');
       });
     });
@@ -259,6 +262,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate(4).should.eventually.equal(4);
+        await schema.validate('4').should.eventually.equal('4');
         await schema.validate(3).should.be.rejectedWith(jp.ValidationError, 'exclusiveMinimum');
         return schema.validate(2).should.be.rejectedWith(jp.ValidationError, 'exclusiveMinimum');
       });
@@ -302,6 +306,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate('abc').should.eventually.equal('abc');
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate('ab').should.be.rejectedWith(jp.ValidationError, 'minLength');
       });
     });
@@ -323,6 +328,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate('a_b').should.eventually.equal('a_b');
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate('abc').should.be.rejectedWith(jp.ValidationError, 'pattern');
       });
     });
@@ -343,6 +349,8 @@ describe('Schema', function() {
           },
           { scope: 'http://example.com' }
         );
+
+        await schema.validate(12).should.eventually.equal(12);
         return schema.validate('test').should.eventually.equal('test');
       });
     });
@@ -391,6 +399,19 @@ describe('Schema', function() {
         const p = schema.validate([1, true, 10.2]);
         const err = await p.should.be.rejectedWith(jp.ValidationError, 'items');
         err.errors.length.should.equal(2);
+
+        const schema2 = await jp.create(
+          {
+            items: [
+              {
+                type: 'string'
+              },
+              undefined
+            ]
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema2.validate([0, true]).should.be.rejectedWith(jp.ValidationError, 'items');
       });
     });
     describe('additionalItems', async function() {
@@ -462,6 +483,7 @@ describe('Schema', function() {
         );
         await schema.validate(['a', 'b']).should.be.fulfilled;
         await schema.validate(['a', 'b', 'c']).should.be.fulfilled;
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate(['a', 'b', 'c', 'd']).should.be.rejectedWith(jp.ValidationError, 'maxItems');
       });
     });
@@ -520,6 +542,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate(['a', 'b', 7, 3]).should.be.fulfilled;
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate(['a', 'b', 7]).should.be.rejectedWith(jp.ValidationError, 'contains');
       });
     });
@@ -542,6 +565,7 @@ describe('Schema', function() {
         );
         await schema.validate({ a: 1, b: 2 }).should.be.fulfilled;
         await schema.validate({ a: 1, b: 2, c: 3 }).should.be.fulfilled;
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate({ a: 1, b: 2, c: 3, d: 4 }).should.be.rejectedWith(jp.ValidationError, 'maxProperties');
       });
     });
@@ -564,6 +588,7 @@ describe('Schema', function() {
         );
         await schema.validate({ a: 1, b: 2, c: 3, d: 4 }).should.be.fulfilled;
         await schema.validate({ a: 1, b: 2, c: 3 }).should.be.fulfilled;
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate({ a: 1, b: 2 }).should.be.rejectedWith(jp.ValidationError, 'minProperties');
       });
     });
@@ -593,7 +618,53 @@ describe('Schema', function() {
         );
         await schema.validate({ a: 1, b: 2, c: 3, d: 4 }).should.be.fulfilled;
         await schema.validate({ a: 1, b: 2, c: 3 }).should.be.fulfilled;
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate({ a: 1, b: 2 }).should.be.rejectedWith(jp.ValidationError, 'required');
+      });
+      it('should handle validation of required properties that have readOnly flag', async function() {
+        const schema = await jp.create(
+          {
+            type: 'object',
+            required: ['a', 'b'],
+            properties: {
+              a: {
+                type: 'string',
+                readOnly: true
+              },
+              b: {
+                type: 'number'
+              }
+            }
+          },
+          { scope: 'http://example.com' }
+        );
+
+        await schema.validate({ b: 1 }).should.be.rejectedWith(jp.ValidationError, 'required');
+        await schema.validate({ b: 1 }, { context: 'write' }).should.be.fulfilled;
+        await schema.validate({ a: 1 }, { context: 'write' }).should.be.rejectedWith(jp.ValidationError, 'required');
+        await schema.validate({ b: 1 }, { context: 'read' }).should.be.rejectedWith(jp.ValidationError, 'required');
+        await schema.validate({}).should.be.rejectedWith(jp.ValidationError, 'required');
+      });
+      it('should handle validation of required properties that have writeOnly flag', async function() {
+        const schema = await jp.create(
+          {
+            type: 'object',
+            required: ['a', 'b'],
+            properties: {
+              a: {
+                type: 'string',
+                writeOnly: true
+              },
+              b: {
+                type: 'number'
+              }
+            }
+          },
+          { scope: 'http://example.com' }
+        );
+
+        await schema.validate({ b: 5 }).should.be.rejectedWith(jp.ValidationError, 'required');
+        await schema.validate({ b: 5 }, { context: 'read' }).should.be.fulfilled;
       });
     });
     describe('properties', async function() {
@@ -627,11 +698,14 @@ describe('Schema', function() {
           },
           { scope: 'http://example.com' }
         );
+
         await schema.validate({ a: 1, b: true, c: 'test', d: 4 }).should.be.fulfilled;
+        await schema.validate({},{ setDefault: true }).should.be.fulfilled;
         const p = schema.validate({ a: 1, b: 2, c: 3 });
         const err = await p.should.be.rejectedWith(jp.ValidationError, 'properties');
         err.errors.length.should.equal(1);
         err.errors[0].message.should.equal('type');
+        await schema.validate(1).should.eventually.equal(1);
       });
       it('should purge out-of-context properties', async function() {
         const schema = await jp.create(
@@ -692,6 +766,7 @@ describe('Schema', function() {
         await schema.validate({ aaa: true, b1: true }).should.be.rejectedWith(jp.ValidationError, 'patternProperties');
         await schema.validate({ aaa: 1, b1: 7 }).should.be.rejectedWith(jp.ValidationError, 'patternProperties');
         await schema.validate({ aba: 8 }).should.be.rejectedWith(jp.ValidationError, 'patternProperties');
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate({ bbc: 'aaa' }).should.be.rejectedWith(jp.ValidationError, 'patternProperties');
       });
       it('should purge out-of-context patternProperties', async function() {
@@ -739,6 +814,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate({ aaa: 1, b: 'x', c: true }).should.be.fulfilled;
+        await schema.validate(1).should.eventually.equal(1);
         return schema.validate({ bbc: 'aaa' }).should.be.rejectedWith(jp.ValidationError, 'additionalProperties');
       });
       it('should validate with a boolean additionalProperties', async function() {
@@ -843,6 +919,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate({ b: true, d: 'aaa', e: 1, f: 2 }).should.be.fulfilled;
+        await schema.validate(1).should.eventually.equal(1);
         await schema.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'dependencies');
         await schema.validate({ d: 'aaa' }).should.be.rejectedWith(jp.ValidationError, 'dependencies');
         return schema.validate({ b: true }).should.be.rejectedWith(jp.ValidationError, 'dependencies');
@@ -860,6 +937,7 @@ describe('Schema', function() {
           { scope: 'http://example.com' }
         );
         await schema.validate({ 'x-a': 3, 'x-b': true }).should.be.fulfilled;
+        await schema.validate(1).should.eventually.equal(1);
         await schema.validate({ a: 1 }).should.be.rejectedWith(jp.ValidationError, 'propertyNames');
         return schema.validate({ 'x-': true }).should.be.rejectedWith(jp.ValidationError, 'propertyNames');
       });
