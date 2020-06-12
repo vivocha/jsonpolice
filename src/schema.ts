@@ -42,7 +42,7 @@ export abstract class Schema {
         'allOf',
         'anyOf',
         'oneOf',
-        'not'
+        'not',
       ]);
     }
     return this._validators;
@@ -103,7 +103,7 @@ export abstract class Schema {
           found = typeof data === 'boolean';
           break;
         case 'object':
-          found = data !== null && typeof data === 'object';
+          found = data !== null && typeof data === 'object' && !Array.isArray(data);
           break;
         case 'array':
           found = Array.isArray(data);
@@ -129,7 +129,7 @@ export abstract class Schema {
   protected enumValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.enum) || spec.enum.length < 1) {
       throw Schema.error(spec, 'enum');
-    } else if (!spec.enum.find(v => _.isEqual(v, data))) {
+    } else if (!spec.enum.find((v) => _.isEqual(v, data))) {
       throw new ValidationError(path, Schema.scope(spec), 'enum');
     }
     return data;
@@ -423,7 +423,7 @@ export abstract class Schema {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       const errors: Error[] = [];
       for (let i in data) {
-        if ((!spec.properties || !spec.properties[i]) && (!spec.patternProperties || !Object.keys(spec.patternProperties).find(p => testRegExp(p, i)))) {
+        if ((!spec.properties || !spec.properties[i]) && (!spec.patternProperties || !Object.keys(spec.patternProperties).find((p) => testRegExp(p, i)))) {
           try {
             if (
               (opts.context === 'write' && spec.additionalProperties.readOnly === true) ||
