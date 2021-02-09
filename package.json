@@ -47,26 +47,26 @@
   },
   "homepage": "https://github.com/vivocha/jsonpolice#readme",
   "devDependencies": {
-    "@commitlint/config-conventional": "^7.5.0",
-    "@types/chai": "^4.1.7",
-    "@types/chai-as-promised": "^7.1.0",
-    "@types/chai-spies": "^1.0.0",
-    "@types/mocha": "^5.2.6",
-    "@types/node": "^11.13.9",
-    "chai": "^4.2.0",
+    "@commitlint/config-conventional": "^11.0.0",
+    "@types/chai": "^4.2.14",
+    "@types/chai-as-promised": "^7.1.3",
+    "@types/chai-spies": "^1.0.3",
+    "@types/mocha": "^8.2.0",
+    "@types/node": "^14.14.25",
+    "chai": "^4.3.0",
     "chai-as-promised": "^7.1.1",
     "chai-spies": "^1.0.0",
-    "commitizen": "^3.1.1",
-    "commitlint": "^7.5.2",
-    "coveralls": "^3.0.3",
-    "cz-conventional-changelog": "^2.1.0",
-    "husky": "^2.2.0",
-    "mocha": "^6.1.4",
-    "mochawesome": "^3.1.2",
-    "nyc": "^14.1.0",
-    "rimraf": "^2.6.3",
-    "semantic-release": "^15.13.3",
-    "typescript": "^3.4.5"
+    "commitizen": "^4.2.3",
+    "commitlint": "^11.0.0",
+    "coveralls": "^3.1.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^5.0.9",
+    "mocha": "^8.2.1",
+    "mochawesome": "^6.2.1",
+    "nyc": "^15.1.0",
+    "rimraf": "^3.0.2",
+    "semantic-release": "^17.3.8",
+    "typescript": "^4.1.3"
   },
   "config": {
     "commitizen": {
@@ -80,7 +80,7 @@
     }
   },
   "dependencies": {
-    "jsonref": "^5.1.3",
-    "lodash": "^4.17.11"
+    "jsonref": "^6.0.0",
+    "lodash": "^4.17.20"
   }
 }

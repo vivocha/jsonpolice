@@ -382,7 +382,8 @@ describe('Schema', function() {
               },
               {
                 type: 'integer'
-              }
+              },
+              undefined
             ]
           },
           { scope: 'http://example.com' }
@@ -1065,6 +1066,9 @@ describe('Schema', function() {
             },
             b: {
               default: 2
+            },
+            d: {
+              default: undefined
             }
           },
           allOf: [
@@ -1093,6 +1097,41 @@ describe('Schema', function() {
       res.a.should.equal(1);
       res.b.should.equal(2);
       res.c.should.equal(4);
+    });
+    it('should ignore clauses not relevant for a type', async function() {
+      const schema = await jp.create({
+        type: 'object',
+        properties: {
+          a: {
+            type: 'string',
+            multipleOf: 1,
+            maximum: 1,
+            minimum: 1,
+            exclusiveMinimum: 1,
+            exclusiveMaximum: 1
+          },
+          b: {
+            type: 'number',
+            maxLength: 1,
+            minLength: 1,
+            pattern: 'a',
+            format: 'uri',
+            maxItems: 1,
+            contains: {},
+            maxProperties: 1,
+            minProperties: 1,
+            required: [ 'c' ],
+            properties: {},
+            patternProperties: {},
+            additionalProperties: {},
+            propertyNames: {},
+            dependencies: {}
+          }
+        }
+      },
+        { scope: 'http://example.com' }
+      );
+      return schema.validate({ a: 'test', b: 0 });
     });
   });
 });
