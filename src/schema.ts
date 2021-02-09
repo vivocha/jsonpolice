@@ -42,7 +42,7 @@ export abstract class Schema {
         'allOf',
         'anyOf',
         'oneOf',
-        'not'
+        'not',
       ]);
     }
     return this._validators;
@@ -103,7 +103,7 @@ export abstract class Schema {
           found = typeof data === 'boolean';
           break;
         case 'object':
-          found = data !== null && typeof data === 'object';
+          found = data !== null && typeof data === 'object' && !Array.isArray(data);
           break;
         case 'array':
           found = Array.isArray(data);
@@ -129,7 +129,7 @@ export abstract class Schema {
   protected enumValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.enum) || spec.enum.length < 1) {
       throw Schema.error(spec, 'enum');
-    } else if (!spec.enum.find(v => _.isEqual(v, data))) {
+    } else if (!spec.enum.find((v) => _.isEqual(v, data))) {
       throw new ValidationError(path, Schema.scope(spec), 'enum');
     }
     return data;
@@ -236,13 +236,10 @@ export abstract class Schema {
       const errors: Error[] = [];
       if (Array.isArray(spec.items)) {
         for (let i = 0; i < spec.items.length; i++) {
-          const subSpec = spec.items[i];
-          if (typeof subSpec !== 'undefined') {
-            try {
-              data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.items[i], `${path}/${i}`, opts);
-            } catch (err) {
-              errors.push(err);
-            }
+          try {
+            data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.items[i], `${path}/${i}`, opts);
+          } catch (err) {
+            errors.push(err);
           }
         }
       } else {
@@ -351,7 +348,11 @@ export abstract class Schema {
       for (let i of spec.required) {
         if (typeof i !== 'string') {
           throw Schema.error(spec, 'required');
-        } else if (!(i in data)) {
+        } else if (
+          !(i in data) &&
+          (typeof spec.properties?.[i]?.readOnly === 'undefined' || (spec.properties[i].readOnly === true && opts.context !== 'write')) &&
+          (typeof spec.properties?.[i]?.writeOnly === 'undefined' || (spec.properties[i].writeOnly === true && opts.context !== 'read'))
+        ) {
           throw new ValidationError(`${path}/${i}`, Schema.scope(spec), 'required');
         }
       }
@@ -422,7 +423,7 @@ export abstract class Schema {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       const errors: Error[] = [];
       for (let i in data) {
-        if ((!spec.properties || !spec.properties[i]) && (!spec.patternProperties || !Object.keys(spec.patternProperties).find(p => testRegExp(p, i)))) {
+        if ((!spec.properties || !spec.properties[i]) && (!spec.patternProperties || !Object.keys(spec.patternProperties).find((p) => testRegExp(p, i)))) {
           try {
             if (
               (opts.context === 'write' && spec.additionalProperties.readOnly === true) ||
