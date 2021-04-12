@@ -129,7 +129,7 @@ export abstract class Schema {
   protected enumValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.enum) || spec.enum.length < 1) {
       throw Schema.error(spec, 'enum');
-    } else if (!spec.enum.find((v) => _.isEqual(v, data))) {
+    } else if (typeof spec.enum.find((v) => _.isEqual(v, data)) === 'undefined') {
       throw new ValidationError(path, Schema.scope(spec), 'enum');
     }
     return data;
