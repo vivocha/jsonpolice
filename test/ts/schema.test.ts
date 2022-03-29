@@ -342,16 +342,108 @@ describe('Schema', function () {
         );
         return schema.validate('abc').should.be.rejectedWith(jp.SchemaError, 'format');
       });
-      it('should validate with format', async function () {
+      it('should validate a valid date with a date-time format', async function () {
         const schema = await jp.create(
           {
-            format: 'TODOTODOTODOTODOTODOTODOTODO',
+            format: 'date-time',
           },
           { scope: 'http://example.com' }
         );
 
-        await schema.validate(12).should.eventually.equal(12);
-        return schema.validate('test').should.eventually.equal('test');
+        await schema.validate('2022-03-29T00:00:00Z').should.eventually.be.a('Date');
+      });
+      it('should fail with an invalid date with a date-time format', async function () {
+        const schema = await jp.create(
+          {
+            format: 'date-time',
+          },
+          { scope: 'http://example.com' }
+        );
+
+        await schema.validate('aaaaa').should.be.rejectedWith(jp.SchemaError, 'format');
+      });
+      it('should validate a valid date with a date format', async function () {
+        const schema = await jp.create(
+          {
+            format: 'date',
+          },
+          { scope: 'http://example.com' }
+        );
+
+        await schema.validate('2022-03-29').should.eventually.be.a('Date');
+      });
+      it('should fail with an invalid date with a date format', async function () {
+        const schema = await jp.create(
+          {
+            format: 'date',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate('2022-03-32').should.be.rejectedWith(jp.SchemaError, 'format');
+        await schema.validate('2022-03-29T00:00:00Z').should.be.rejectedWith(jp.SchemaError, 'format');
+      });
+      it('should validate a valid time with a time format', async function () {
+        const schema = await jp.create(
+          {
+            format: 'time',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate('12:32:10').should.eventually.equal('12:32:10');
+        await schema.validate('12:32:10.333').should.eventually.equal('12:32:10.333');
+      });
+      it('should fail with an invalid time with a time format', async function () {
+        const schema = await jp.create(
+          {
+            format: 'time',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate('aaaa').should.be.rejectedWith(jp.SchemaError, 'format');
+        await schema.validate('26:12:99').should.be.rejectedWith(jp.SchemaError, 'format');
+      });
+      it('should validate a valid email with a email format', async function () {
+        const schema = await jp.create(
+          {
+            format: 'email',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate('joe@example.com').should.eventually.equal('joe@example.com');
+      });
+      it('should fail with an invalid email with a email format', async function () {
+        const schema = await jp.create(
+          {
+            format: 'email',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate('aaaa').should.be.rejectedWith(jp.SchemaError, 'format');
+      });
+      it('should validate other valid formats', async function () {
+        let schema = await jp.create(
+          {
+            format: 'hostname',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate('example.com').should.eventually.equal('example.com');
+        await schema.validate('a b c').should.be.rejectedWith(jp.SchemaError, 'format');
+        schema = await jp.create(
+          {
+            format: 'ipv4',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate('1.2.3.4').should.eventually.equal('1.2.3.4');
+        await schema.validate('300.2').should.be.rejectedWith(jp.SchemaError, 'format');
+        schema = await jp.create(
+          {
+            format: 'uri',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate('http://a.b.c').should.eventually.equal('http://a.b.c');
       });
     });
     describe('items', async function () {
@@ -389,9 +481,9 @@ describe('Schema', function () {
                 type: 'boolean',
               },
               {
-                type: 'integer'
-              }
-            ]
+                type: 'integer',
+              },
+            ],
           },
           { scope: 'http://example.com' }
         );
@@ -1174,11 +1266,11 @@ describe('Schema', function () {
               default: 1,
             },
             b: {
-              default: 2
+              default: 2,
             },
             d: {
-              default: undefined
-            }
+              default: undefined,
+            },
           },
           allOf: [
             {
@@ -1207,37 +1299,38 @@ describe('Schema', function () {
       res.b.should.equal(2);
       res.c.should.equal(4);
     });
-    it('should ignore clauses not relevant for a type', async function() {
-      const schema = await jp.create({
-        type: 'object',
-        properties: {
-          a: {
-            type: 'string',
-            multipleOf: 1,
-            maximum: 1,
-            minimum: 1,
-            exclusiveMinimum: 1,
-            exclusiveMaximum: 1
+    it('should ignore clauses not relevant for a type', async function () {
+      const schema = await jp.create(
+        {
+          type: 'object',
+          properties: {
+            a: {
+              type: 'string',
+              multipleOf: 1,
+              maximum: 1,
+              minimum: 1,
+              exclusiveMinimum: 1,
+              exclusiveMaximum: 1,
+            },
+            b: {
+              type: 'number',
+              maxLength: 1,
+              minLength: 1,
+              pattern: 'a',
+              format: 'uri',
+              maxItems: 1,
+              contains: {},
+              maxProperties: 1,
+              minProperties: 1,
+              required: ['c'],
+              properties: {},
+              patternProperties: {},
+              additionalProperties: {},
+              propertyNames: {},
+              dependencies: {},
+            },
           },
-          b: {
-            type: 'number',
-            maxLength: 1,
-            minLength: 1,
-            pattern: 'a',
-            format: 'uri',
-            maxItems: 1,
-            contains: {},
-            maxProperties: 1,
-            minProperties: 1,
-            required: [ 'c' ],
-            properties: {},
-            patternProperties: {},
-            additionalProperties: {},
-            propertyNames: {},
-            dependencies: {}
-          }
-        }
-      },
+        },
         { scope: 'http://example.com' }
       );
       return schema.validate({ a: 'test', b: 0 });

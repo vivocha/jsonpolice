@@ -227,7 +227,26 @@ export abstract class Schema {
       if (typeof spec.format !== 'string') {
         throw Schema.error(spec, 'format');
       }
-      // TODO validate format
+      switch (spec.format) {
+        case 'date':
+        case 'date-time':
+          if (!testRegExp(spec.format, data)) {
+            throw Schema.error(spec, 'format');
+          } else {
+            return new Date(data);
+          }
+        case 'time':
+        case 'email':
+        case 'hostname':
+        case 'ipv4':
+        case 'ipv6':
+        case 'uri':
+          if (!testRegExp(spec.format, data)) {
+            throw Schema.error(spec, 'format');
+          } else {
+            return data;
+          }
+      }
     }
     return data;
   }
