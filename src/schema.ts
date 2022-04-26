@@ -115,7 +115,7 @@ export abstract class Schema {
           found = typeof data === 'number' && !isNaN(data) && parseInt('' + data) === data;
           break;
         case 'string':
-          found = typeof data === 'string';
+          found = typeof data === 'string' || data instanceof Date;
           break;
         default:
           throw Schema.error(spec, 'type');
@@ -213,6 +213,7 @@ export abstract class Schema {
     return data;
   }
   protected patternValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    if (data instanceof Date) data = data.toISOString();
     if (typeof data === 'string') {
       if (typeof spec.pattern !== 'string') {
         throw Schema.error(spec, 'pattern');
@@ -223,6 +224,12 @@ export abstract class Schema {
     return data;
   }
   protected formatValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    if (data instanceof Date) {
+      data = data.toISOString();
+      if (spec.format === 'date') {
+        data = data.substring(0, 10);
+      }
+    }
     if (typeof data === 'string') {
       if (typeof spec.format !== 'string') {
         throw Schema.error(spec, 'format');

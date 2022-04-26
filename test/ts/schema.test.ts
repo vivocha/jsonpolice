@@ -331,6 +331,16 @@ describe('Schema', function () {
         await schema.validate(1).should.eventually.equal(1);
         return schema.validate('abc').should.be.rejectedWith(jp.ValidationError, 'pattern');
       });
+      it('should validate a Date with pattern', async function () {
+        const schema = await jp.create(
+          {
+            pattern: '^202[12]',
+          },
+          { scope: 'http://example.com' }
+        );
+        await schema.validate(new Date('2021-01-01')).should.eventually.equal('2021-01-01T00:00:00.000Z');
+        return schema.validate(new Date('2020-01-01')).should.be.rejectedWith(jp.ValidationError, 'pattern');
+      });
     });
     describe('format', async function () {
       it('should fail with an invalid format', async function () {
@@ -351,6 +361,8 @@ describe('Schema', function () {
         );
 
         await schema.validate('2022-03-29T00:00:00Z').should.eventually.be.a('Date');
+        debugger;
+        await schema.validate(new Date('2022-03-29T10:10:10Z')).should.eventually.be.a('Date');
       });
       it('should fail with an invalid date with a date-time format', async function () {
         const schema = await jp.create(
@@ -371,6 +383,8 @@ describe('Schema', function () {
         );
 
         await schema.validate('2022-03-29').should.eventually.be.a('Date');
+        debugger;
+        await schema.validate(new Date('2022-03-29')).should.eventually.be.a('Date');
       });
       it('should fail with an invalid date with a date format', async function () {
         const schema = await jp.create(
