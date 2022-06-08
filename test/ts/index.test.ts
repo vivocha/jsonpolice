@@ -1,31 +1,31 @@
-import * as chai from 'chai';
-import * as chaiAsPromised from 'chai-as-promised';
-import * as spies from 'chai-spies';
-import * as jp from '../../dist/index';
+import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import spies from 'chai-spies';
+import * as jp from '../../dist/index.js';
 
 chai.should();
 chai.use(spies);
 chai.use(chaiAsPromised);
 
-describe('jsonpolice', function() {
-  describe('create', function() {
-    it('should failed to create a schema from an invalid value', async function() {
+describe('jsonpolice', function () {
+  describe('create', function () {
+    it('should failed to create a schema from an invalid value', async function () {
       return jp.create(1, { scope: 'http://example.com' }).should.be.rejectedWith(jp.SchemaError, /schema/);
     });
-    it('should create a "true" schema', async function() {
+    it('should create a "true" schema', async function () {
       const schema = await jp.create(true, { scope: 'http://example.com' });
       schema.should.be.a.instanceOf(jp.Schema);
       return schema.validate({}).should.eventually.deep.equal({});
     });
-    it('should create a "false" schema', async function() {
+    it('should create a "false" schema', async function () {
       const schema = await jp.create(false, { scope: 'http://example.com' });
       schema.should.be.a.instanceOf(jp.Schema);
       return schema.validate({}).should.be.rejectedWith(jp.ValidationError, /false/);
     });
   });
 
-  describe('compliance', function() {
-    it('should create a validator of the JSON-Schema draft 4 specification', async function() {
+  describe('compliance', function () {
+    it('should create a validator of the JSON-Schema draft 4 specification', async function () {
       const spec = {
         id: 'http://json-schema.org/draft-04/schema#',
         $schema: 'http://json-schema.org/draft-04/schema#',
@@ -34,113 +34,113 @@ describe('jsonpolice', function() {
           schemaArray: {
             type: 'array',
             minItems: 1,
-            items: { $ref: '#' }
+            items: { $ref: '#' },
           },
           positiveInteger: {
             type: 'integer',
-            minimum: 0
+            minimum: 0,
           },
           positiveIntegerDefault0: {
-            allOf: [{ $ref: '#/definitions/positiveInteger' }, { default: 0 }]
+            allOf: [{ $ref: '#/definitions/positiveInteger' }, { default: 0 }],
           },
           simpleTypes: {
-            enum: ['array', 'boolean', 'integer', 'null', 'number', 'object', 'string']
+            enum: ['array', 'boolean', 'integer', 'null', 'number', 'object', 'string'],
           },
           stringArray: {
             type: 'array',
             items: { type: 'string' },
             minItems: 1,
-            uniqueItems: true
-          }
+            uniqueItems: true,
+          },
         },
         type: 'object',
         properties: {
           id: {
             type: 'string',
-            format: 'uri'
+            format: 'uri',
           },
           $schema: {
             type: 'string',
-            format: 'uri'
+            format: 'uri',
           },
           title: {
-            type: 'string'
+            type: 'string',
           },
           description: {
-            type: 'string'
+            type: 'string',
           },
           default: {},
           multipleOf: {
             type: 'number',
             minimum: 0,
-            exclusiveMinimum: true
+            exclusiveMinimum: true,
           },
           maximum: {
-            type: 'number'
+            type: 'number',
           },
           exclusiveMaximum: {
             type: 'boolean',
-            default: false
+            default: false,
           },
           minimum: {
-            type: 'number'
+            type: 'number',
           },
           exclusiveMinimum: {
             type: 'boolean',
-            default: false
+            default: false,
           },
           maxLength: { $ref: '#/definitions/positiveInteger' },
           minLength: { $ref: '#/definitions/positiveIntegerDefault0' },
           pattern: {
             type: 'string',
-            format: 'regex'
+            format: 'regex',
           },
           additionalItems: {
             anyOf: [{ type: 'boolean' }, { $ref: '#' }],
-            default: {}
+            default: {},
           },
           items: {
             anyOf: [{ $ref: '#' }, { $ref: '#/definitions/schemaArray' }],
-            default: {}
+            default: {},
           },
           maxItems: { $ref: '#/definitions/positiveInteger' },
           minItems: { $ref: '#/definitions/positiveIntegerDefault0' },
           uniqueItems: {
             type: 'boolean',
-            default: false
+            default: false,
           },
           maxProperties: { $ref: '#/definitions/positiveInteger' },
           minProperties: { $ref: '#/definitions/positiveIntegerDefault0' },
           required: { $ref: '#/definitions/stringArray' },
           additionalProperties: {
             anyOf: [{ type: 'boolean' }, { $ref: '#' }],
-            default: {}
+            default: {},
           },
           definitions: {
             type: 'object',
             additionalProperties: { $ref: '#' },
-            default: {}
+            default: {},
           },
           properties: {
             type: 'object',
             additionalProperties: { $ref: '#' },
-            default: {}
+            default: {},
           },
           patternProperties: {
             type: 'object',
             additionalProperties: { $ref: '#' },
-            default: {}
+            default: {},
           },
           dependencies: {
             type: 'object',
             additionalProperties: {
-              anyOf: [{ $ref: '#' }, { $ref: '#/definitions/stringArray' }]
-            }
+              anyOf: [{ $ref: '#' }, { $ref: '#/definitions/stringArray' }],
+            },
           },
           enum: {
             type: 'array',
             minItems: 1,
-            uniqueItems: true
+            uniqueItems: true,
           },
           type: {
             anyOf: [
@@ -149,23 +149,23 @@ describe('jsonpolice', function() {
                 type: 'array',
                 items: { $ref: '#/definitions/simpleTypes' },
                 minItems: 1,
-                uniqueItems: true
-              }
-            ]
+                uniqueItems: true,
+              },
+            ],
           },
           allOf: { $ref: '#/definitions/schemaArray' },
           anyOf: { $ref: '#/definitions/schemaArray' },
           oneOf: { $ref: '#/definitions/schemaArray' },
-          not: { $ref: '#' }
+          not: { $ref: '#' },
         },
         dependencies: {
           exclusiveMaximum: ['maximum'],
-          exclusiveMinimum: ['minimum']
+          exclusiveMinimum: ['minimum'],
         },
-        default: {}
+        default: {},
       };
       const opts = {
-        scope: 'http://json-schema.org/draft-04/schema#'
+        scope: 'http://json-schema.org/draft-04/schema#',
       };
       const schema = await jp.create(spec, opts);
       await schema.validate({ type: true }).should.be.rejectedWith(jp.ValidationError, 'properties');
@@ -173,14 +173,14 @@ describe('jsonpolice', function() {
         type: 'object',
         properties: {
           a: {
-            type: 'integer'
-          }
+            type: 'integer',
+          },
         },
-        additionalProperties: { $ref: '#' }
+        additionalProperties: { $ref: '#' },
       }).should.be.fulfilled;
     });
 
-    it('should create a validator of the JSON-Schema draft 7 specification', async function() {
+    it('should create a validator of the JSON-Schema draft 7 specification', async function () {
       const spec = {
         $schema: 'http://json-schema.org/draft-07/schema#',
         $id: 'http://json-schema.org/draft-07/schema#',
@@ -189,89 +189,89 @@ describe('jsonpolice', function() {
           schemaArray: {
             type: 'array',
             minItems: 1,
-            items: { $ref: '#' }
+            items: { $ref: '#' },
           },
           nonNegativeInteger: {
             type: 'integer',
-            minimum: 0
+            minimum: 0,
           },
           nonNegativeIntegerDefault0: {
-            allOf: [{ $ref: '#/definitions/nonNegativeInteger' }, { default: 0 }]
+            allOf: [{ $ref: '#/definitions/nonNegativeInteger' }, { default: 0 }],
           },
           simpleTypes: {
-            enum: ['array', 'boolean', 'integer', 'null', 'number', 'object', 'string']
+            enum: ['array', 'boolean', 'integer', 'null', 'number', 'object', 'string'],
           },
           stringArray: {
             type: 'array',
             items: { type: 'string' },
             uniqueItems: true,
-            default: []
-          }
+            default: [],
+          },
         },
         type: ['object', 'boolean'],
         properties: {
           $id: {
             type: 'string',
-            format: 'uri-reference'
+            format: 'uri-reference',
           },
           $schema: {
             type: 'string',
-            format: 'uri'
+            format: 'uri',
           },
           $ref: {
             type: 'string',
-            format: 'uri-reference'
+            format: 'uri-reference',
           },
           $comment: {
-            type: 'string'
+            type: 'string',
           },
           title: {
-            type: 'string'
+            type: 'string',
           },
           description: {
-            type: 'string'
+            type: 'string',
           },
           default: true,
           readOnly: {
             type: 'boolean',
-            default: false
+            default: false,
           },
           examples: {
             type: 'array',
-            items: true
+            items: true,
           },
           multipleOf: {
             type: 'number',
-            exclusiveMinimum: 0
+            exclusiveMinimum: 0,
           },
           maximum: {
-            type: 'number'
+            type: 'number',
           },
           exclusiveMaximum: {
-            type: 'number'
+            type: 'number',
           },
           minimum: {
-            type: 'number'
+            type: 'number',
           },
           exclusiveMinimum: {
-            type: 'number'
+            type: 'number',
           },
           maxLength: { $ref: '#/definitions/nonNegativeInteger' },
           minLength: { $ref: '#/definitions/nonNegativeIntegerDefault0' },
           pattern: {
             type: 'string',
-            format: 'regex'
+            format: 'regex',
           },
           additionalItems: { $ref: '#' },
           items: {
             anyOf: [{ $ref: '#' }, { $ref: '#/definitions/schemaArray' }],
-            default: true
+            default: true,
           },
           maxItems: { $ref: '#/definitions/nonNegativeInteger' },
           minItems: { $ref: '#/definitions/nonNegativeIntegerDefault0' },
           uniqueItems: {
             type: 'boolean',
-            default: false
+            default: false,
           },
           contains: { $ref: '#' },
           maxProperties: { $ref: '#/definitions/nonNegativeInteger' },
@@ -281,24 +281,24 @@ describe('jsonpolice', function() {
           definitions: {
             type: 'object',
             additionalProperties: { $ref: '#' },
-            default: {}
+            default: {},
           },
           properties: {
             type: 'object',
             additionalProperties: { $ref: '#' },
-            default: {}
+            default: {},
           },
           patternProperties: {
             type: 'object',
             additionalProperties: { $ref: '#' },
             propertyNames: { format: 'regex' },
-            default: {}
+            default: {},
           },
           dependencies: {
             type: 'object',
             additionalProperties: {
-              anyOf: [{ $ref: '#' }, { $ref: '#/definitions/stringArray' }]
-            }
+              anyOf: [{ $ref: '#' }, { $ref: '#/definitions/stringArray' }],
+            },
           },
           propertyNames: { $ref: '#' },
           const: true,
@@ -306,7 +306,7 @@ describe('jsonpolice', function() {
             type: 'array',
             items: true,
             minItems: 1,
-            uniqueItems: true
+            uniqueItems: true,
           },
           type: {
             anyOf: [
@@ -315,9 +315,9 @@ describe('jsonpolice', function() {
                 type: 'array',
                 items: { $ref: '#/definitions/simpleTypes' },
                 minItems: 1,
-                uniqueItems: true
-              }
-            ]
+                uniqueItems: true,
+              },
+            ],
           },
           format: { type: 'string' },
           contentMediaType: { type: 'string' },
@@ -328,12 +328,12 @@ describe('jsonpolice', function() {
           allOf: { $ref: '#/definitions/schemaArray' },
           anyOf: { $ref: '#/definitions/schemaArray' },
           oneOf: { $ref: '#/definitions/schemaArray' },
-          not: { $ref: '#' }
+          not: { $ref: '#' },
         },
-        default: true
+        default: true,
       };
       const opts = {
-        scope: 'http://json-schema.org/draft-07/schema#'
+        scope: 'http://json-schema.org/draft-07/schema#',
       };
       const schema = await jp.create(spec, opts);
       await schema.validate({ type: true }).should.be.rejectedWith(jp.ValidationError, 'properties');
@@ -341,10 +341,10 @@ describe('jsonpolice', function() {
         type: 'object',
         properties: {
           a: {
-            type: 'integer'
-          }
+            type: 'integer',
+          },
         },
-        additionalProperties: { $ref: '#' }
+        additionalProperties: { $ref: '#' },
       }).should.be.fulfilled;
     });
   });

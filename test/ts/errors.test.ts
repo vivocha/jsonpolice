@@ -1,8 +1,8 @@
-import * as chai from 'chai';
-import * as chaiAsPromised from 'chai-as-promised';
-import * as spies from 'chai-spies';
-import * as jp from '../../dist/index';
-import { ValidationError } from '../../dist/index';
+import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import spies from 'chai-spies';
+import * as jp from '../../dist/index.js';
+import { ValidationError } from '../../dist/index.js';
 
 chai.should();
 chai.use(spies);

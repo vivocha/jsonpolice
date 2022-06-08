@@ -1,8 +1,8 @@
 import * as refs from 'jsonref';
-import * as _ from 'lodash';
-import { SchemaError, ValidationError } from './errors';
-import { SchemaOptions, ValidationOptions } from './types';
-import { testRegExp } from './utils';
+import _ from 'lodash';
+import { SchemaError, ValidationError } from './errors.js';
+import { SchemaOptions, ValidationOptions } from './types.js';
+import { testRegExp } from './utils.js';
 
 export abstract class Schema {
   protected _validators: Set<string>;

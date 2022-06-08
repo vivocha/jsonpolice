@@ -1,5 +1,5 @@
 import * as refs from 'jsonref';
-import { Schema } from './schema';
+import { Schema } from './schema.js';
 
 export interface SchemaOptions extends refs.ParseOptions {}
 export interface SchemaMeta extends refs.Meta {
