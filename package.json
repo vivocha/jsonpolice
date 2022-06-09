@@ -3,8 +3,12 @@
   "version": "0.0.0-development",
   "description": "JSON Schema parser and validator",
   "type": "module",
-  "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./dist/*.js": "./dist/*.js",
+    "./*.js": "./dist/*.js"
+  },
+  "types": "./dist/index.d.ts",
   "directories": {
     "test": "test"
   },
@@ -60,11 +64,11 @@
     "mocha": "^10.0.0",
     "mochawesome": "^7.1.3",
     "rimraf": "^3.0.2",
-    "semantic-release": "^19.0.2",
+    "semantic-release": "^19.0.3",
     "typescript": "^4.7.3"
   },
   "dependencies": {
-    "jsonref": "^8.0.4",
+    "jsonref": "^8.0.7",
     "lodash": "^4.17.21"
   },
   "engines": {
