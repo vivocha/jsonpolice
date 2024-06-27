@@ -1,10 +1,8 @@
-import chai from 'chai';
+import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import spies from 'chai-spies';
-import * as utils from '../../dist/utils.js';
+import * as utils from './utils.js';
 
 chai.should();
-chai.use(spies);
 chai.use(chaiAsPromised);
 
 describe('global', function () {

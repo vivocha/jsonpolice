@@ -1,10 +1,8 @@
-import chai from 'chai';
+import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import spies from 'chai-spies';
-import * as jp from '../../dist/index.js';
+import * as jp from './index.js';
 
 chai.should();
-chai.use(spies);
 chai.use(chaiAsPromised);
 
 describe('jsonpolice', function () {
