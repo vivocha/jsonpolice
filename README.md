@@ -1,132 +1,480 @@
 # jsonpolice
 
-A Javascript library implementing the [JSON Schema](http://json-schema.org/documentation.html) draft 7.
+A powerful JavaScript library implementing [JSON Schema](http://json-schema.org/documentation.html) draft 7 specification. Validate JSON data against schemas with comprehensive validation rules, default value assignment, and property filtering capabilities.
 
-The library can optionally decorate parsed objects in order to have them return default values defined in the schema, for
-undefined properties.
-
-[![travis build](https://img.shields.io/travis/vivocha/jsonpolice.svg)](https://travis-ci.org/vivocha/jsonpolice)
-[![Coverage Status](https://coveralls.io/repos/github/vivocha/jsonpolice/badge.svg?branch=master)](https://coveralls.io/github/vivocha/jsonpolice?branch=master)
 [![npm version](https://img.shields.io/npm/v/jsonpolice.svg)](https://www.npmjs.com/package/jsonpolice)
+[![CI](https://github.com/vivocha/jsonpolice/actions/workflows/ci.yml/badge.svg)](https://github.com/vivocha/jsonpolice/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/vivocha/jsonpolice/badge.svg?branch=master)](https://coveralls.io/github/vivocha/jsonpolice?branch=master)
 
-## Install
+## Features
+
+- ✅ **JSON Schema Draft 7**: Full implementation of JSON Schema specification
+- ✅ **Schema Validation**: Comprehensive validation with detailed error reporting
+- ✅ **Default Values**: Automatic assignment of default values for undefined properties
+- ✅ **Property Filtering**: Remove additional, readOnly, or writeOnly properties
+- ✅ **Context-Aware**: Support for read/write contexts to handle property visibility
+- ✅ **External References**: Resolve `$ref` references to external schemas
+- ✅ **TypeScript Support**: Full TypeScript definitions included
+- ✅ **Modern ES Modules**: Supports both ESM and CommonJS
+- ✅ **Zero Dependencies**: Lightweight with minimal dependencies (only jsonref)
+
+## Installation
 
 ```bash
-$ npm install jsonpolice
+# npm
+npm install jsonpolice
+
+# pnpm
+pnpm add jsonpolice
+
+# yarn
+yarn add jsonpolice
 ```
 
-## create(dataOrUri, options)
+## Quick Start
 
-Create a new instance of schema validator.
-
-* `dataOrUri`, the schema to parse or a fully qualified URI to pass to `retriever` to download the schema
-* `options`, parsing options, the following optional properties are supported:
-  * `scope` (required), the current resolution scope (absolute URL) of URLs and paths.
-  * `registry`, an object to use to cache resolved `id`  and `$ref` values. If no registry is passed,
-one is automatically created. Pass a `registry` if you are going to parse several schemas or URIs referencing
-the same `id` and `$ref` values.
-  * `retriever`, a function accepting a URL in input and returning a promise resolved to an object
-representing the data downloaded for the URI. Whenever a `$ref` to a new URI is found, if the URI is not
-already cached in the store in use, it'll be fetched using this `retriever`. If not `retriever` is passed
-and a URI needs to be downloaded, a `no_retriever` exception is thrown. Refer to the documentation of
-[jsonref](https://github.com/vivocha/jsonref) for sample retriever functions to use in the browser or
-with Node.js.
-
-The function returns a Promise resolving to a new instance of Schema. Once created, a schema instance can be used
-repeatedly to validate data, calling the method `Schema.validate`.
-
-### Example
+### Basic Schema Validation
 
 ```javascript
-import * as jp from 'jsonpolice';
+import { create } from 'jsonpolice';
 
-(async () => {
-
-  const schema = jp.create({
-    type: 'object',
-    properties: {
-      d: {
-        type: 'string',
-        format: 'date-time'
-      },
-      i: {
-        type: 'integer'
-      },
-      b: {
-        type: [ 'boolean', 'number' ]
-      },
-      c: {
-        default: 5
-      }
-    }
-  });
-  
-  try {
-    const result = await schema.validate({
-      d: (new Date()).toISOString(),
-      i: 6,
-      b: true
-    });
-  } catch(err) {
-    // validation failed
-  }
-
-})();
-```
-
-## Schema.validate(data _[, options]_)
-
-Validates the input data
-
-* `data`, the data to parse
-* `options`, validation options, the following optional properties are supported:
-  * `setDefault`, if `true` returns the default value specified in the schema (if any) for undefined properties
-  * `removeAdditional`, if `true` deletes properties not validating against additionalProperties, without failing 
-  * `context`, if set to `read` deletes writeOnly properties, if set to `write` delete readOnly properties
-
-Returns a decorated version of data, according to the specified options.
-
-### Example
-
-Using the following schema:
-
-```javascript
-{
+const schema = await create({
   type: 'object',
   properties: {
-    d: {
-      type: 'string',
-    },
-    i: {
-      type: 'integer'
-    },
-    b: {
-      type: [ 'boolean', 'number' ]
-    },
-    c: {
-      default: 5
-    }
-  }
+    name: { type: 'string', minLength: 1 },
+    email: { type: 'string', format: 'email' },
+    age: { type: 'integer', minimum: 0, maximum: 120 }
+  },
+  required: ['name', 'email']
+});
+
+// Valid data
+const validData = {
+  name: 'John Doe',
+  email: 'john@example.com',
+  age: 30
+};
+
+try {
+  const result = await schema.validate(validData);
+  console.log('Valid:', result);
+} catch (error) {
+  console.error('Validation failed:', error.message);
 }
 ```
 
-And parsing the following data:
+### Schema with Default Values
 
 ```javascript
-var output = schema.validate({
-  d: 'test',
-  i: 10,
-  b: true
+import { create } from 'jsonpolice';
+
+const schema = await create({
+  type: 'object',
+  properties: {
+    name: { type: 'string' },
+    role: { type: 'string', default: 'user' },
+    preferences: {
+      type: 'object',
+      properties: {
+        theme: { type: 'string', default: 'light' },
+        notifications: { type: 'boolean', default: true }
+      }
+    }
+  }
+});
+
+const data = { name: 'Alice' };
+const result = await schema.validate(data, { setDefault: true });
+console.log(result);
+// Output: { name: 'Alice', role: 'user', preferences: { theme: 'light', notifications: true } }
+```
+
+## API Reference
+
+### create(schemaOrUri, options?)
+
+Creates a new schema validator instance.
+
+**Parameters:**
+- `schemaOrUri` (object | string): JSON Schema object or URI to fetch the schema
+- `options` (object, optional): Configuration options
+  - `scope` (string): Base URI for resolving relative references
+  - `registry` (object): Cache object to store resolved references for reuse
+  - `retriever` (function): Function to fetch external references `(url: string) => Promise<object>`
+
+**Returns:** `Promise<Schema>` - A schema validator instance
+
+**Example:**
+```javascript
+import { create } from 'jsonpolice';
+
+// Create from schema object
+const schema = await create({
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' }
+  }
+});
+
+// Create from URI with custom retriever
+const remoteSchema = await create('https://example.com/schema.json', {
+  retriever: (url) => fetch(url).then(r => r.json())
 });
 ```
 
-Produces the following output:
+### schema.validate(data, options?)
+
+Validates data against the schema.
+
+**Parameters:**
+- `data` (any): The data to validate
+- `options` (object, optional): Validation options
+  - `setDefault` (boolean): Add default values for undefined properties
+  - `removeAdditional` (boolean): Remove properties not allowed by `additionalProperties`
+  - `context` (string): Set to `'read'` to remove writeOnly properties, `'write'` to remove readOnly properties
+
+**Returns:** The validated and potentially modified data
+
+**Throws:** `ValidationError` if validation fails
+
+**Examples:**
+```javascript
+// Basic validation
+const result = await schema.validate({ name: 'John' });
+
+// Validation with default values
+const withDefaults = await schema.validate(
+  { name: 'John' }, 
+  { setDefault: true }
+);
+
+// Remove additional properties
+const cleaned = await schema.validate(
+  { name: 'John', extra: 'removed' }, 
+  { removeAdditional: true }
+);
+
+// Context-aware validation (API response context)
+const forReading = await schema.validate(
+  { password: 'secret', publicInfo: 'visible' }, 
+  { context: 'read' }
+);
+```
+
+## Usage Examples
+
+### Complex Schema Validation
 
 ```javascript
-{
-  "d": "test",
-  "i": 10,
-  "b": true,
-  "c": 5
+import { create } from 'jsonpolice';
+
+const userSchema = await create({
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    email: { type: 'string', format: 'email' },
+    name: { type: 'string', minLength: 1, maxLength: 100 },
+    age: { type: 'integer', minimum: 0, maximum: 150 },
+    roles: {
+      type: 'array',
+      items: { type: 'string', enum: ['admin', 'user', 'guest'] },
+      uniqueItems: true
+    },
+    profile: {
+      type: 'object',
+      properties: {
+        bio: { type: 'string', maxLength: 500 },
+        website: { type: 'string', format: 'uri' },
+        socialMedia: {
+          type: 'object',
+          additionalProperties: { type: 'string', format: 'uri' }
+        }
+      }
+    }
+  },
+  required: ['id', 'email', 'name'],
+  additionalProperties: false
+});
+
+const userData = {
+  id: '123e4567-e89b-12d3-a456-426614174000',
+  email: 'user@example.com',
+  name: 'John Doe',
+  age: 30,
+  roles: ['user'],
+  profile: {
+    bio: 'Software developer',
+    website: 'https://johndoe.dev',
+    socialMedia: {
+      twitter: 'https://twitter.com/johndoe',
+      github: 'https://github.com/johndoe'
+    }
+  }
+};
+
+try {
+  const validated = await userSchema.validate(userData);
+  console.log('User data is valid:', validated);
+} catch (error) {
+  console.error('Validation failed:', error.message);
 }
+```
+
+### Working with External Schema References
+
+```javascript
+import { create } from 'jsonpolice';
+
+const schema = await create({
+  type: 'object',
+  properties: {
+    user: { '$ref': 'https://json-schema.org/learn/examples/person.schema.json' },
+    timestamp: { type: 'string', format: 'date-time' }
+  }
+}, {
+  retriever: async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch schema: ${response.status}`);
+    }
+    return response.json();
+  }
+});
+```
+
+### Context-Aware Validation (Read/Write Operations)
+
+```javascript
+import { create } from 'jsonpolice';
+
+const apiSchema = await create({
+  type: 'object',
+  properties: {
+    id: { type: 'string', readOnly: true },
+    email: { type: 'string', format: 'email' },
+    password: { type: 'string', writeOnly: true, minLength: 8 },
+    createdAt: { type: 'string', format: 'date-time', readOnly: true },
+    updatedAt: { type: 'string', format: 'date-time', readOnly: true }
+  },
+  required: ['email']
+});
+
+// When creating a user (write context) - password is allowed, read-only fields are removed
+const createData = {
+  email: 'user@example.com',
+  password: 'secretpassword',
+  createdAt: '2023-01-01T00:00:00Z' // This will be removed
+};
+
+const forCreation = await apiSchema.validate(createData, { context: 'write' });
+console.log(forCreation); // { email: 'user@example.com', password: 'secretpassword' }
+
+// When returning user data (read context) - password is removed, read-only fields are kept
+const responseData = {
+  id: '123',
+  email: 'user@example.com',
+  password: 'secretpassword', // This will be removed
+  createdAt: '2023-01-01T00:00:00Z',
+  updatedAt: '2023-01-01T00:00:00Z'
+};
+
+const forResponse = await apiSchema.validate(responseData, { context: 'read' });
+console.log(forResponse); // { id: '123', email: 'user@example.com', createdAt: '...', updatedAt: '...' }
+```
+
+### Advanced Validation with Custom Formats
+
+```javascript
+import { create } from 'jsonpolice';
+
+const schema = await create({
+  type: 'object',
+  properties: {
+    username: { 
+      type: 'string', 
+      pattern: '^[a-zA-Z0-9_]{3,20}$' 
+    },
+    birthDate: { 
+      type: 'string', 
+      format: 'date' 
+    },
+    phoneNumber: { 
+      type: 'string', 
+      pattern: '^\\+?[1-9]\\d{1,14}$' 
+    },
+    metadata: {
+      type: 'object',
+      patternProperties: {
+        '^[a-z_]+$': { type: 'string' }
+      },
+      additionalProperties: false
+    }
+  }
+});
+
+const data = {
+  username: 'john_doe_123',
+  birthDate: '1990-05-15',
+  phoneNumber: '+1234567890',
+  metadata: {
+    department: 'engineering',
+    team_lead: 'jane_smith'
+  }
+};
+
+const result = await schema.validate(data);
+```
+
+### Performance Optimization with Shared Registry
+
+```javascript
+import { create } from 'jsonpolice';
+
+const registry = {}; // Shared registry for caching
+
+const userSchema = await create(userSchemaDefinition, { registry });
+const productSchema = await create(productSchemaDefinition, { registry });
+const orderSchema = await create(orderSchemaDefinition, { registry });
+
+// All schemas will share the same registry, improving performance
+// when they reference common schema definitions
+```
+
+## Error Handling
+
+jsonpolice provides detailed error information when validation fails:
+
+```javascript
+import { create } from 'jsonpolice';
+
+const schema = await create({
+  type: 'object',
+  properties: {
+    email: { type: 'string', format: 'email' },
+    age: { type: 'integer', minimum: 0 }
+  },
+  required: ['email']
+});
+
+try {
+  await schema.validate({
+    email: 'invalid-email',
+    age: -5
+  });
+} catch (error) {
+  console.log(error.name); // 'ValidationError'
+  console.log(error.message); // Detailed error message
+  console.log(error.errors); // Array of specific validation errors
+  
+  // Each error contains:
+  // - path: JSON Pointer to the invalid property
+  // - message: Human-readable error description
+  // - constraint: The violated constraint
+  // - value: The invalid value
+}
+```
+
+## Supported JSON Schema Keywords
+
+jsonpolice implements the complete JSON Schema Draft 7 specification:
+
+### Type Validation
+- `type` - Validate basic types (string, number, integer, boolean, array, object, null)
+- `enum` - Validate against enumerated values
+- `const` - Validate against a constant value
+
+### String Validation
+- `minLength`, `maxLength` - String length constraints
+- `pattern` - Regular expression pattern matching
+- `format` - Built-in format validation (email, date-time, uri, uuid, etc.)
+
+### Number Validation
+- `minimum`, `maximum` - Numeric range validation
+- `exclusiveMinimum`, `exclusiveMaximum` - Exclusive numeric ranges
+- `multipleOf` - Multiple validation
+
+### Array Validation
+- `items` - Validate array items against schema(s)
+- `additionalItems` - Handle additional items beyond defined schemas
+- `minItems`, `maxItems` - Array length constraints
+- `uniqueItems` - Ensure array items are unique
+- `contains` - At least one item must match schema
+
+### Object Validation
+- `properties` - Define property schemas
+- `patternProperties` - Properties matching regex patterns
+- `additionalProperties` - Handle additional properties
+- `required` - Required properties
+- `minProperties`, `maxProperties` - Object size constraints
+- `dependencies` - Property dependencies
+- `propertyNames` - Validate property names
+
+### Schema Composition
+- `allOf` - Must match all schemas
+- `anyOf` - Must match at least one schema
+- `oneOf` - Must match exactly one schema
+- `not` - Must not match schema
+- `if`/`then`/`else` - Conditional validation
+
+### Meta-Schema Support
+- `$ref` - Reference resolution
+- `$id` - Schema identification
+- `definitions` - Schema definitions
+
+## TypeScript Support
+
+Full TypeScript definitions are included:
+
+```typescript
+import { create, Schema, ValidationError } from 'jsonpolice';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+const schema: Schema = await create({
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    email: { type: 'string', format: 'email' },
+    name: { type: 'string' }
+  },
+  required: ['id', 'email', 'name']
+});
+
+try {
+  const validated: User = await schema.validate(data);
+} catch (error: ValidationError) {
+  console.error('Validation failed:', error.message);
+}
+```
+
+## Performance Tips
+
+1. **Reuse schema instances** - Create schemas once and reuse them for multiple validations
+2. **Use shared registries** - Share registries between related schemas to cache external references
+3. **Optimize external references** - Implement efficient retriever functions with caching
+4. **Consider validation options** - Only use `setDefault`, `removeAdditional`, and `context` when needed
+
+## Browser Support
+
+jsonpolice works in all modern browsers and Node.js environments. It requires:
+- ES2015+ support
+- Promise support
+- JSON.parse/JSON.stringify
+
+## License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please ensure all tests pass:
+
+```bash
+pnpm install
+pnpm test
+pnpm run coverage
 ```
