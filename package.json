@@ -1,6 +1,6 @@
 {
   "name": "jsonpolice",
-  "version": "12.0.0",
+  "version": "12.0.1",
   "description": "JSON Schema parser and validator",
   "type": "module",
   "exports": {
