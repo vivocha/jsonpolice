@@ -13,8 +13,8 @@ importers:
   .:
     dependencies:
       jsonref:
-        specifier: ^9.0.0
-        version: 9.0.0
+        specifier: ^9.0.2
+        version: 9.0.2
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -1166,9 +1166,9 @@ packages:
   jsonfile@6.2.0:
     resolution: {integrity: sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==}
 
-  jsonref@9.0.0:
-    resolution: {integrity: sha512-ZTL2Q9aus/aycsxw/pB5ffWcbrr/219DTlJ/TTvTOMWMcxkUCCMxdvJ/6zrWGNACVdlO2ySad5EShC8d52IwEA==}
-    engines: {node: '>=16.14.0'}
+  jsonref@9.0.2:
+    resolution: {integrity: sha512-XrEwAyAS8cF3m+OLOT2iRs0/6r4F2eNI9OFg7g4z+D9WCPjLtjZ9ZZ727/waRTRy/Yjw905ZWVA7wgIsxUTiZA==}
+    engines: {node: '>=18.17.0'}
 
   jsprim@1.4.2:
     resolution: {integrity: sha512-P2bSOMAc/ciLz6DzgjVlGJP9+BrJWu5UDGK70C2iweC5QBIeFf0ZXRvGjEj2uYgrY2MkAAhsSWHDWlFtEroZWw==}
@@ -3279,7 +3279,7 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  jsonref@9.0.0: {}
+  jsonref@9.0.2: {}
 
   jsprim@1.4.2:
     dependencies:
