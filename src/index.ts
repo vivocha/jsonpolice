@@ -6,8 +6,8 @@ export * from './errors.js';
 export * from './schema.js';
 export * from './types.js';
 
-export function create(dataOrUri: any, opts: SchemaOptions): Promise<Schema> {
-  return StaticSchema.create(dataOrUri, opts);
+export function create(dataOrUri: any, opts?: SchemaOptions): Promise<Schema> {
+  return StaticSchema.create(dataOrUri, opts || {});
 }
 
 export default create;

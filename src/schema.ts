@@ -1,55 +1,98 @@
 import * as refs from 'jsonref';
 import _ from 'lodash';
 import { SchemaError, ValidationError } from './errors.js';
-import { SchemaOptions, ValidationOptions } from './types.js';
+import { SchemaOptions, ValidationOptions, JsonSchemaVersion, EvaluationContext } from './types.js';
 import { testRegExp } from './utils.js';
 
 export abstract class Schema {
   protected _validators: Set<string>;
+  protected _version: JsonSchemaVersion = 'draft-07';
 
   abstract spec(): Promise<any>;
 
+  protected detectVersion(spec: any): JsonSchemaVersion {
+    if (spec && spec.$schema) {
+      const schema = spec.$schema;
+      if (schema.includes('2020-12')) return '2020-12';
+      if (schema.includes('2019-09')) return '2019-09';
+      if (schema.includes('draft-07')) return 'draft-07';
+    }
+    return 'draft-07';
+  }
+
+  protected getValidators(version: JsonSchemaVersion = this._version): Set<string> {
+    const baseValidators = new Set([
+      'type',
+      'enum',
+      'const',
+      'multipleOf',
+      'maximum',
+      'exclusiveMaximum',
+      'minimum',
+      'exclusiveMinimum',
+      'maxLength',
+      'minLength',
+      'pattern',
+      'format',
+      'items',
+      'additionalItems',
+      'maxItems',
+      'minItems',
+      'uniqueItems',
+      'contains',
+      'maxProperties',
+      'minProperties',
+      'required',
+      'properties',
+      'patternProperties',
+      'additionalProperties',
+      'dependencies',
+      'propertyNames',
+      'if',
+      'allOf',
+      'anyOf',
+      'oneOf',
+      'not',
+      // Metadata keywords
+      'title',
+      'description',
+      'default',
+      'examples',
+      'readOnly',
+      'writeOnly',
+      // Content keywords  
+      'contentEncoding',
+      'contentMediaType',
+    ]);
+
+    // Add newer keywords for 2019-09 and later
+    if (version === '2019-09' || version === '2020-12' || 
+        version.includes('2019-09') || version.includes('2020-12')) {
+      baseValidators.add('dependentSchemas');
+      baseValidators.add('dependentRequired');
+      baseValidators.add('unevaluatedProperties');
+      baseValidators.add('unevaluatedItems');
+      baseValidators.add('$defs');
+      baseValidators.add('deprecated');
+    }
+
+    return baseValidators;
+  }
+
   protected get validators(): Set<string> {
     if (!this._validators) {
-      this._validators = new Set([
-        'type',
-        'enum',
-        'const',
-        'multipleOf',
-        'maximum',
-        'exclusiveMaximum',
-        'minimum',
-        'exclusiveMinimum',
-        'maxLength',
-        'minLength',
-        'pattern',
-        'format',
-        'items',
-        'additionalItems',
-        'maxItems',
-        'minItems',
-        'uniqueItems',
-        'contains',
-        'maxProperties',
-        'minProperties',
-        'required',
-        'properties',
-        'patternProperties',
-        'additionalProperties',
-        'dependencies',
-        'propertyNames',
-        'if',
-        'allOf',
-        'anyOf',
-        'oneOf',
-        'not',
-      ]);
+      this._validators = this.getValidators(this._version);
     }
     return this._validators;
   }
 
   async validate(data: any, opts: ValidationOptions = {}, path = ''): Promise<any> {
     const spec = await this.spec();
+    // Auto-detect version from schema if not already set
+    if (this._version === 'draft-07' && spec) {
+      this._version = this.detectVersion(spec);
+      this._validators = this.getValidators(this._version);
+    }
     return this.validateSpec(Schema.scope(spec), data, spec, path, opts);
   }
 
@@ -244,10 +287,20 @@ export abstract class Schema {
           }
         case 'time':
         case 'email':
+        case 'idn-email':
         case 'hostname':
+        case 'idn-hostname':
         case 'ipv4':
         case 'ipv6':
         case 'uri':
+        case 'uri-reference':
+        case 'iri':
+        case 'iri-reference':
+        case 'uri-template':
+        case 'json-pointer':
+        case 'relative-json-pointer':
+        case 'regex':
+        case 'uuid':
           if (!testRegExp(spec.format, data)) {
             throw Schema.error(spec, 'format');
           } else {
@@ -505,6 +558,113 @@ export abstract class Schema {
     }
     return data;
   }
+  protected dependentSchemasValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
+      if (spec.dependentSchemas === null || typeof spec.dependentSchemas !== 'object' || Array.isArray(spec.dependentSchemas)) {
+        throw Schema.error(spec, 'dependentSchemas');
+      }
+      const errors: Error[] = [];
+      for (let i in spec.dependentSchemas) {
+        if (i in data) {
+          try {
+            data = this.validateSpec(Schema.scope(spec), data, spec.dependentSchemas[i], `${path}/dependentSchemas/${i}`, opts);
+          } catch (err) {
+            errors.push(err);
+          }
+        }
+      }
+      if (errors.length) {
+        throw new ValidationError(path, Schema.scope(spec), 'dependentSchemas', errors);
+      }
+    }
+    return data;
+  }
+  protected dependentRequiredValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
+      if (spec.dependentRequired === null || typeof spec.dependentRequired !== 'object' || Array.isArray(spec.dependentRequired)) {
+        throw Schema.error(spec, 'dependentRequired');
+      }
+      const errors: Error[] = [];
+      for (let i in spec.dependentRequired) {
+        if (i in data) {
+          if (!Array.isArray(spec.dependentRequired[i])) {
+            throw Schema.error(spec, 'dependentRequired');
+          }
+          for (let j of spec.dependentRequired[i]) {
+            if (typeof j !== 'string') {
+              throw Schema.error(spec, 'dependentRequired');
+            } else if (!(j in data)) {
+              errors.push(new ValidationError(`${path}/dependentRequired/${i}`, Schema.scope(spec.dependentRequired[i]), 'dependentRequired'));
+            }
+          }
+        }
+      }
+      if (errors.length) {
+        throw new ValidationError(path, Schema.scope(spec), 'dependentRequired', errors);
+      }
+    }
+    return data;
+  }
+  protected $defsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // $defs is handled by jsonref during schema resolution, no validation needed
+    // But emit deprecation warning if both definitions and $defs are present
+    if (spec.definitions && spec.$defs && this._version !== 'draft-07') {
+      console.warn(`Warning: Both "definitions" and "$defs" found in schema. Use "$defs" instead of "definitions" for JSON Schema ${this._version}`);
+    }
+    return data;
+  }
+  protected unevaluatedPropertiesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
+      // TODO: Track evaluated properties through validation context
+      // For now, implement a simplified version that treats unevaluated as additional
+      const errors: Error[] = [];
+      for (let i in data) {
+        if ((!spec.properties || !spec.properties[i]) && 
+            (!spec.patternProperties || !Object.keys(spec.patternProperties).find((p) => testRegExp(p, i)))) {
+          try {
+            if (
+              (opts.context === 'write' && spec.unevaluatedProperties.readOnly === true) ||
+              (opts.context === 'read' && spec.unevaluatedProperties.writeOnly === true)
+            ) {
+              delete data[i];
+            } else {
+              data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.unevaluatedProperties, `${path}/${i}`, opts);
+            }
+          } catch (err) {
+            if (opts.removeAdditional) {
+              delete data[i];
+            } else {
+              errors.push(err);
+            }
+          }
+        }
+      }
+      if (errors.length) {
+        throw new ValidationError(path, Schema.scope(spec), 'unevaluatedProperties', errors);
+      }
+    }
+    return data;
+  }
+  protected unevaluatedItemsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    if (Array.isArray(data) && Array.isArray(spec.items)) {
+      // TODO: Track evaluated items through validation context
+      // For now, implement similar to additionalItems
+      const errors: Error[] = [];
+      for (let i = 0; i < data.length; i++) {
+        if (typeof spec.items[i] === 'undefined') {
+          try {
+            data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.unevaluatedItems, `${path}/${i}`, opts);
+          } catch (err) {
+            errors.push(err);
+          }
+        }
+      }
+      if (errors.length) {
+        throw new ValidationError(path, Schema.scope(spec), 'unevaluatedItems', errors);
+      }
+    }
+    return data;
+  }
   protected propertyNamesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
       const errors: Error[] = [];
@@ -595,6 +755,46 @@ export abstract class Schema {
     }
     throw new ValidationError(path, Schema.scope(spec), 'not');
   }
+  
+  // Metadata keyword validators (annotations - no validation logic needed)
+  protected titleValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // title is purely for documentation, no validation needed
+    return data;
+  }
+  protected descriptionValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // description is purely for documentation, no validation needed
+    return data;
+  }
+  protected defaultValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // default is handled in the default() method, no validation needed here
+    return data;
+  }
+  protected examplesValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // examples is purely for documentation, no validation needed
+    return data;
+  }
+  protected readOnlyValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // readOnly is handled in properties/patternProperties validators, no validation needed here
+    return data;
+  }
+  protected writeOnlyValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // writeOnly is handled in properties/patternProperties validators, no validation needed here
+    return data;
+  }
+  
+  // Content keyword validators (annotations - no validation logic needed in basic implementation)
+  protected contentEncodingValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // contentEncoding describes the encoding of string content, no validation needed
+    return data;
+  }
+  protected contentMediaTypeValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // contentMediaType describes the media type of string content, no validation needed
+    return data;
+  }
+  protected deprecatedValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
+    // deprecated is purely for documentation/tooling, no validation needed
+    return data;
+  }
 
   protected default(spec: any, path: string): any {
     return spec.default;
@@ -611,15 +811,25 @@ export abstract class Schema {
 export class StaticSchema extends Schema {
   protected _spec: Promise<any>;
 
-  protected constructor(dataOrUri: any, opts: SchemaOptions) {
+  protected constructor(dataOrUri: any, opts: SchemaOptions = {}) {
     super();
+    // Set version from options if provided
+    if (opts.version) {
+      this._version = opts.version;
+    }
+    
     const t = typeof dataOrUri;
     if (t === 'boolean') {
       this._spec = Promise.resolve(dataOrUri);
     } else if (dataOrUri !== null && (t === 'string' || t === 'object')) {
-      this._spec = refs.parse(dataOrUri, opts);
+      // Create ParseOptions with required scope (use default URI if not provided)
+      const parseOpts: refs.ParseOptions = {
+        scope: opts.scope || 'http://localhost/',
+        ...opts
+      };
+      this._spec = refs.parse(dataOrUri, parseOpts);
     } else {
-      throw new SchemaError(opts.scope, 'schema', dataOrUri);
+      throw new SchemaError(opts?.scope || '', 'schema', dataOrUri);
     }
   }
   spec(): Promise<any> {

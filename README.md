@@ -1,6 +1,6 @@
 # jsonpolice
 
-A powerful JavaScript library implementing [JSON Schema](http://json-schema.org/documentation.html) draft 7 specification. Validate JSON data against schemas with comprehensive validation rules, default value assignment, and property filtering capabilities.
+A powerful JavaScript library implementing [JSON Schema](https://json-schema.org/specification) draft 7 specification with support for newer versions. Validate JSON data against schemas with comprehensive validation rules, default value assignment, and property filtering capabilities.
 
 [![npm version](https://img.shields.io/npm/v/jsonpolice.svg)](https://www.npmjs.com/package/jsonpolice)
 [![CI](https://github.com/vivocha/jsonpolice/actions/workflows/ci.yml/badge.svg)](https://github.com/vivocha/jsonpolice/actions/workflows/ci.yml)
@@ -8,15 +8,17 @@ A powerful JavaScript library implementing [JSON Schema](http://json-schema.org/
 
 ## Features
 
-- ✅ **JSON Schema Draft 7**: Full implementation of JSON Schema specification
+- ✅ **JSON Schema Draft 7, 2019-09 & 2020-12**: Full implementation with automatic version detection
 - ✅ **Schema Validation**: Comprehensive validation with detailed error reporting
 - ✅ **Default Values**: Automatic assignment of default values for undefined properties
 - ✅ **Property Filtering**: Remove additional, readOnly, or writeOnly properties
 - ✅ **Context-Aware**: Support for read/write contexts to handle property visibility
 - ✅ **External References**: Resolve `$ref` references to external schemas
+- ✅ **Modern Keywords**: Support for `dependentSchemas`, `dependentRequired`, `unevaluatedProperties`, `unevaluatedItems`, and `$defs`
+- ✅ **Backwards Compatible**: Full compatibility with existing Draft 7 schemas
 - ✅ **TypeScript Support**: Full TypeScript definitions included
 - ✅ **Modern ES Modules**: Supports both ESM and CommonJS
-- ✅ **Zero Dependencies**: Lightweight with minimal dependencies (only jsonref)
+- ✅ **Minimal Dependencies**: Lightweight with minimal dependencies (only jsonref)
 
 ## Installation
 
@@ -98,7 +100,8 @@ Creates a new schema validator instance.
 **Parameters:**
 - `schemaOrUri` (object | string): JSON Schema object or URI to fetch the schema
 - `options` (object, optional): Configuration options
-  - `scope` (string): Base URI for resolving relative references
+  - `version` (string): Explicit JSON Schema version ('draft-07', '2019-09', '2020-12'). Auto-detected from `$schema` if not provided
+  - `scope` (string): Base URI for resolving relative references (optional for inline schemas)
   - `registry` (object): Cache object to store resolved references for reuse
   - `retriever` (function): Function to fetch external references `(url: string) => Promise<object>`
 
@@ -386,7 +389,14 @@ jsonpolice implements the complete JSON Schema Draft 7 specification:
 ### String Validation
 - `minLength`, `maxLength` - String length constraints
 - `pattern` - Regular expression pattern matching
-- `format` - Built-in format validation (email, date-time, uri, uuid, etc.)
+- `format` - Built-in format validation including:
+  - **Date/Time**: `date`, `time`, `date-time`
+  - **Email**: `email`, `idn-email`
+  - **Hostnames**: `hostname`, `idn-hostname`
+  - **IP Addresses**: `ipv4`, `ipv6`
+  - **URIs**: `uri`, `uri-reference`, `iri`, `iri-reference`, `uri-template`
+  - **JSON Pointers**: `json-pointer`, `relative-json-pointer`
+  - **Other**: `uuid`, `regex`
 
 ### Number Validation
 - `minimum`, `maximum` - Numeric range validation
@@ -406,7 +416,7 @@ jsonpolice implements the complete JSON Schema Draft 7 specification:
 - `additionalProperties` - Handle additional properties
 - `required` - Required properties
 - `minProperties`, `maxProperties` - Object size constraints
-- `dependencies` - Property dependencies
+- `dependencies` - Property dependencies (Draft 7)
 - `propertyNames` - Validate property names
 
 ### Schema Composition
@@ -419,7 +429,65 @@ jsonpolice implements the complete JSON Schema Draft 7 specification:
 ### Meta-Schema Support
 - `$ref` - Reference resolution
 - `$id` - Schema identification
-- `definitions` - Schema definitions
+- `definitions` - Schema definitions (Draft 7)
+- `$defs` - Schema definitions (2019-09+, preferred over `definitions`)
+
+### Metadata Keywords
+- `title` - Schema title for documentation
+- `description` - Schema description for documentation  
+- `default` - Default values for properties
+- `examples` - Example values for documentation
+- `readOnly` - Properties that should not be sent in requests
+- `writeOnly` - Properties that should not be sent in responses
+- `deprecated` - Mark properties as deprecated (2019-09+)
+
+### Content Keywords
+- `contentEncoding` - Describe string content encoding (e.g., base64)
+- `contentMediaType` - Describe string content media type (e.g., application/json)
+
+### New Features in JSON Schema 2019-09 & 2020-12
+- `dependentSchemas` - Schema-based dependencies (replaces object-form `dependencies`)
+- `dependentRequired` - Property-based dependencies (replaces array-form `dependencies`) 
+- `unevaluatedProperties` - Handle properties not evaluated by other keywords
+- `unevaluatedItems` - Handle array items not evaluated by other keywords
+- Automatic version detection from `$schema` property
+- Full backwards compatibility with Draft 7 schemas
+
+## JSON Schema Version Support
+
+jsonpolice automatically detects the JSON Schema version from the `$schema` property:
+
+```javascript
+// Draft 7 (default)
+const draft7Schema = await create({
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  type: 'string'
+});
+
+// JSON Schema 2019-09
+const schema2019 = await create({
+  $schema: 'https://json-schema.org/draft/2019-09/schema',
+  type: 'object',
+  dependentRequired: {
+    name: ['surname']
+  }
+});
+
+// JSON Schema 2020-12
+const schema2020 = await create({
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  properties: {
+    name: { type: 'string' }
+  },
+  unevaluatedProperties: false
+});
+
+// Explicit version
+const explicitSchema = await create({
+  type: 'string'
+}, { version: '2020-12' });
+```
 
 ## TypeScript Support
 
