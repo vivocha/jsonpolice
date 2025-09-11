@@ -76,7 +76,20 @@ export abstract class Schema {
       baseValidators.add('deprecated');
     }
 
+    // Allow derived classes to add additional validators
+    this.addCustomValidators(baseValidators, version);
+
     return baseValidators;
+  }
+
+  /**
+   * Hook for derived classes to add custom validators to the base set.
+   * Override this method to add additional validator keywords.
+   * @param validators The set of base validators to modify
+   * @param version The JSON Schema version being used
+   */
+  protected addCustomValidators(validators: Set<string>, version: JsonSchemaVersion): void {
+    // Default implementation does nothing - derived classes can override
   }
 
   protected get validators(): Set<string> {
