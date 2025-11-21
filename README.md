@@ -17,8 +17,9 @@ A powerful JavaScript library implementing [JSON Schema](https://json-schema.org
 - ✅ **Modern Keywords**: Support for `dependentSchemas`, `dependentRequired`, `unevaluatedProperties`, `unevaluatedItems`, and `$defs`
 - ✅ **Backwards Compatible**: Full compatibility with existing Draft 7 schemas
 - ✅ **TypeScript Support**: Full TypeScript definitions included
-- ✅ **Modern ES Modules**: Supports both ESM and CommonJS
-- ✅ **Minimal Dependencies**: Lightweight with minimal dependencies (only jsonref)
+- ✅ **Modern ES Modules**: Pure ESM package for modern JavaScript environments
+- ✅ **Minimal Dependencies**: Lightweight with minimal dependencies (jsonref and lodash)
+- ✅ **Extensible**: Support for custom validators via class extension
 
 ## Installation
 
@@ -32,6 +33,10 @@ pnpm add jsonpolice
 # yarn
 yarn add jsonpolice
 ```
+
+**Requirements:**
+- Node.js >= 18.17.0
+- ES Module support (this is a pure ESM package)
 
 ## Quick Start
 
@@ -89,6 +94,30 @@ const data = { name: 'Alice' };
 const result = await schema.validate(data, { setDefault: true });
 console.log(result);
 // Output: { name: 'Alice', role: 'user', preferences: { theme: 'light', notifications: true } }
+```
+
+## Exports
+
+jsonpolice exports the following members:
+
+```typescript
+// Main function
+import { create } from 'jsonpolice';
+
+// Classes
+import { Schema, StaticSchema } from 'jsonpolice';
+
+// Types
+import { SchemaOptions, ValidationOptions, SchemaVersion } from 'jsonpolice';
+
+// Errors
+import { ValidationError, SchemaError } from 'jsonpolice';
+
+// Re-exports from jsonref
+import { expand, parse, resolve } from 'jsonpolice';
+
+// Default export
+import create from 'jsonpolice'; // Same as named export
 ```
 
 ## API Reference
@@ -328,6 +357,87 @@ const data = {
 const result = await schema.validate(data);
 ```
 
+### Conditional Validation with if/then/else
+
+```javascript
+import { create } from 'jsonpolice';
+
+const schema = await create({
+  type: 'object',
+  properties: {
+    country: { type: 'string' },
+    postalCode: { type: 'string' }
+  },
+  required: ['country'],
+  if: {
+    properties: { country: { const: 'US' } }
+  },
+  then: {
+    properties: {
+      postalCode: { pattern: '^\\d{5}(-\\d{4})?$' }
+    }
+  },
+  else: {
+    properties: {
+      postalCode: { pattern: '^[A-Z0-9]{3,10}$' }
+    }
+  }
+});
+
+// Valid US postal code
+await schema.validate({ country: 'US', postalCode: '12345' }); // ✓
+
+// Valid non-US postal code
+await schema.validate({ country: 'UK', postalCode: 'SW1A 1AA' }); // ✓
+
+// Invalid - doesn't match US format
+// await schema.validate({ country: 'US', postalCode: 'ABC' }); // ✗
+```
+
+### Schema Definitions with $defs
+
+```javascript
+import { create } from 'jsonpolice';
+
+const schema = await create({
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  properties: {
+    billing_address: { $ref: '#/$defs/address' },
+    shipping_address: { $ref: '#/$defs/address' }
+  },
+  $defs: {
+    address: {
+      type: 'object',
+      properties: {
+        street: { type: 'string' },
+        city: { type: 'string' },
+        state: { type: 'string', pattern: '^[A-Z]{2}$' },
+        zipCode: { type: 'string', pattern: '^\\d{5}$' }
+      },
+      required: ['street', 'city', 'state', 'zipCode']
+    }
+  }
+});
+
+const orderData = {
+  billing_address: {
+    street: '123 Main St',
+    city: 'Boston',
+    state: 'MA',
+    zipCode: '02101'
+  },
+  shipping_address: {
+    street: '456 Oak Ave',
+    city: 'Cambridge',
+    state: 'MA',
+    zipCode: '02139'
+  }
+};
+
+const validated = await schema.validate(orderData);
+```
+
 ### Performance Optimization with Shared Registry
 
 ```javascript
@@ -342,6 +452,53 @@ const orderSchema = await create(orderSchemaDefinition, { registry });
 // All schemas will share the same registry, improving performance
 // when they reference common schema definitions
 ```
+
+## Extensibility
+
+jsonpolice supports custom validators through class extension. You can extend the `Schema` class to add custom validation keywords:
+
+```javascript
+import { Schema } from 'jsonpolice';
+
+class CustomSchema extends Schema {
+  // Override to add custom validators
+  addCustomValidators(validators) {
+    // Add a custom 'divisibleBy' validator
+    validators.add('divisibleBy', (data, spec, path, opts) => {
+      if (typeof data !== 'number') {
+        return data;
+      }
+      if (data % spec.divisibleBy !== 0) {
+        throw new ValidationError(
+          path,
+          this.scope(spec),
+          'divisibleBy',
+          `must be divisible by ${spec.divisibleBy}`
+        );
+      }
+      return data;
+    });
+
+    return validators;
+  }
+}
+
+// Use the custom schema
+const schema = new CustomSchema({
+  type: 'number',
+  divisibleBy: 3
+});
+
+await schema.init();
+await schema.validate(9);  // ✓ Valid
+// await schema.validate(10); // ✗ Throws ValidationError
+```
+
+This pattern allows you to:
+- Add domain-specific validation rules
+- Implement custom format validators
+- Create specialized validators for your application needs
+- Maintain type safety and error handling consistency
 
 ## Error Handling
 
@@ -396,7 +553,7 @@ jsonpolice implements the complete JSON Schema Draft 7 specification:
   - **IP Addresses**: `ipv4`, `ipv6`
   - **URIs**: `uri`, `uri-reference`, `iri`, `iri-reference`, `uri-template`
   - **JSON Pointers**: `json-pointer`, `relative-json-pointer`
-  - **Other**: `uuid`, `regex`
+  - **Other**: `uuid`, `regex`, `semver`
 
 ### Number Validation
 - `minimum`, `maximum` - Numeric range validation
@@ -611,14 +768,46 @@ All fixes include comprehensive test coverage:
 - 17 tests for critical bugs
 - 19 tests for high priority bugs
 - 24 tests for medium priority bugs
-- **Total**: 211 tests passing with 99.81% code coverage
+- **Total**: 211 tests passing with 100% code coverage
 
-## Browser Support
+## Compatibility
 
-jsonpolice works in all modern browsers and Node.js environments. It requires:
-- ES2015+ support
-- Promise support
+### Node.js
+
+jsonpolice requires Node.js >= 18.17.0 and is published as a pure ESM package.
+
+**Using with CommonJS:**
+
+If you need to use jsonpolice in a CommonJS project, you have several options:
+
+1. **Dynamic import** (recommended):
+```javascript
+// CommonJS file
+const createSchema = async () => {
+  const { create } = await import('jsonpolice');
+  const schema = await create({ type: 'string' });
+  return schema;
+};
+```
+
+2. **Convert your project to ESM** by adding `"type": "module"` to your package.json
+
+3. **Use a bundler** like webpack or esbuild that can handle ESM dependencies
+
+### Browser Support
+
+jsonpolice works in all modern browsers that support:
+- ES2022+ features
+- ES Modules (ESM)
+- Promise and async/await
 - JSON.parse/JSON.stringify
+
+**Supported environments:**
+- Node.js >= 18.17.0
+- Chrome/Edge >= 91
+- Firefox >= 89
+- Safari >= 15
+- Modern bundlers (webpack, vite, rollup, esbuild)
 
 ## License
 
@@ -626,10 +815,39 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Contributions are welcome! Please ensure all tests pass:
+Contributions are welcome! Please ensure all tests pass and maintain 100% code coverage:
 
 ```bash
+# Install dependencies
 pnpm install
+
+# Run tests
 pnpm test
-pnpm run coverage
+
+# Check code coverage (must be 100%)
+pnpm run cover
+pnpm run check-coverage
+
+# Build the project
+pnpm run build
+
+# Clean build artifacts
+pnpm run clean
 ```
+
+**Development Guidelines:**
+- Maintain 100% test coverage for all new code
+- Follow existing code style and conventions
+- Add tests for bug fixes and new features
+- Update documentation for API changes
+- Ensure all tests pass before submitting PRs
+
+## Resources
+
+- **GitHub Repository**: [vivocha/jsonpolice](https://github.com/vivocha/jsonpolice)
+- **npm Package**: [jsonpolice](https://www.npmjs.com/package/jsonpolice)
+- **Issue Tracker**: [GitHub Issues](https://github.com/vivocha/jsonpolice/issues)
+- **JSON Schema Specification**: [json-schema.org](https://json-schema.org/)
+- **JSON Schema Draft 7**: [Specification](https://json-schema.org/draft-07/json-schema-release-notes.html)
+- **JSON Schema 2019-09**: [Specification](https://json-schema.org/draft/2019-09/release-notes.html)
+- **JSON Schema 2020-12**: [Specification](https://json-schema.org/draft/2020-12/release-notes.html)
