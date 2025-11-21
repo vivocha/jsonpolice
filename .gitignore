@@ -41,4 +41,11 @@ typings
 
 dist
 test-results
-test/ts/*.js
+
+# Compiled TypeScript files in source directories
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+test/**/*.js
+test/**/*.js.map
+test/**/*.d.ts
