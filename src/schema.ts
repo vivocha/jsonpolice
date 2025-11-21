@@ -414,14 +414,23 @@ export abstract class Schema {
   protected containsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data)) {
       let found = false;
+      const validatedIndices: number[] = [];
+      // First pass: check which elements validate
       for (let i = 0; i < data.length; i++) {
         try {
-          data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.contains, `${path}/${i}`, opts);
+          this.validateSpec(Schema.scope(spec), data[i], spec.contains, `${path}/${i}`, opts);
+          validatedIndices.push(i);
           found = true;
-        } catch (err) {}
+        } catch (err) {
+          // Element doesn't match, continue
+        }
       }
       if (!found) {
         throw new ValidationError(path, Schema.scope(spec), 'contains');
+      }
+      // Second pass: only mutate validated elements
+      for (let i of validatedIndices) {
+        data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.contains, `${path}/${i}`, opts);
       }
     }
     return data;
@@ -531,9 +540,12 @@ export abstract class Schema {
       for (let i in data) {
         if ((!spec.properties || !spec.properties[i]) && (!spec.patternProperties || !Object.keys(spec.patternProperties).find((p) => testRegExp(p, i)))) {
           try {
+            // Check if additionalProperties is an object before accessing its properties
             if (
-              (opts.context === 'write' && spec.additionalProperties.readOnly === true) ||
-              (opts.context === 'read' && spec.additionalProperties.writeOnly === true)
+              typeof spec.additionalProperties === 'object' &&
+              spec.additionalProperties !== null &&
+              ((opts.context === 'write' && spec.additionalProperties.readOnly === true) ||
+              (opts.context === 'read' && spec.additionalProperties.writeOnly === true))
             ) {
               delete data[i];
             } else {
@@ -646,12 +658,15 @@ export abstract class Schema {
       // For now, implement a simplified version that treats unevaluated as additional
       const errors: Error[] = [];
       for (let i in data) {
-        if ((!spec.properties || !spec.properties[i]) && 
+        if ((!spec.properties || !spec.properties[i]) &&
             (!spec.patternProperties || !Object.keys(spec.patternProperties).find((p) => testRegExp(p, i)))) {
           try {
+            // Check if unevaluatedProperties is an object before accessing its properties
             if (
-              (opts.context === 'write' && spec.unevaluatedProperties.readOnly === true) ||
-              (opts.context === 'read' && spec.unevaluatedProperties.writeOnly === true)
+              typeof spec.unevaluatedProperties === 'object' &&
+              spec.unevaluatedProperties !== null &&
+              ((opts.context === 'write' && spec.unevaluatedProperties.readOnly === true) ||
+              (opts.context === 'read' && spec.unevaluatedProperties.writeOnly === true))
             ) {
               delete data[i];
             } else {
@@ -745,34 +760,47 @@ export abstract class Schema {
       throw Schema.error(spec, 'anyOf');
     }
     let found = false;
+    let validData: any;
+    // Try each schema without mutating original data until one succeeds
     for (let i of spec.anyOf) {
       try {
-        data = this.validateSpec(Schema.scope(spec), data, i, path, opts);
+        // Clone data to avoid partial mutations on failures
+        const testData = Array.isArray(data) ? [...data] : (typeof data === 'object' && data !== null) ? { ...data } : data;
+        validData = this.validateSpec(Schema.scope(spec), testData, i, path, opts);
         found = true;
-      } catch (err) {}
+        break; // Use first matching schema
+      } catch (err) {
+        // Schema doesn't match, try next
+      }
     }
     if (!found) {
       throw new ValidationError(path, Schema.scope(spec), 'anyOf');
     }
-    return data;
+    return validData;
   }
   protected oneOfValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (!Array.isArray(spec.oneOf)) {
       throw Schema.error(spec, 'oneOf');
     }
     let found = 0;
+    let validData: any;
+    // Try each schema without mutating original data
     for (let i of spec.oneOf) {
       try {
-        const newData = this.validateSpec(Schema.scope(spec), data, i, path, opts);
+        // Clone data to avoid partial mutations on failures
+        const testData = Array.isArray(data) ? [...data] : (typeof data === 'object' && data !== null) ? { ...data } : data;
+        const newData = this.validateSpec(Schema.scope(spec), testData, i, path, opts);
         if (++found === 1) {
-          data = newData;
+          validData = newData;
         }
-      } catch (err) {}
+      } catch (err) {
+        // Schema doesn't match, continue checking
+      }
     }
     if (found !== 1) {
       throw new ValidationError(path, Schema.scope(spec), 'oneOf');
     }
-    return data;
+    return validData;
   }
   protected notValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     try {
