@@ -1,6 +1,6 @@
 import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import * as utils from './utils.js';
+import * as utils from '../src/utils.js';
 
 chai.should();
 chai.use(chaiAsPromised);

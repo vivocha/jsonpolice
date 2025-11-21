@@ -4,18 +4,17 @@
   "description": "JSON Schema parser and validator",
   "type": "module",
   "exports": {
-    ".": "./dist/index.js",
-    "./dist/*.js": "./dist/*.js"
+    ".": "./dist/src/index.js",
+    "./dist/src/*.js": "./dist/src/*.js"
   },
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "directories": {
     "test": "test"
   },
   "files": [
-    "dist/**/*.js",
-    "dist/**/*.js.map",
-    "dist/**/*.d.ts",
-    "!dist/**/*.test.*",
+    "dist/src/**/*.js",
+    "dist/src/**/*.js.map",
+    "dist/src/**/*.d.ts",
     "README.md",
     "LICENSE"
   ],
@@ -29,7 +28,7 @@
     "prebuild": "rimraf dist",
     "check-coverage": "c8 check-coverage --statements 100 --branches 100 --functions 100 --lines 100",
     "watch:test": "pnpm t -- -w",
-    "test": "pnpm run build && mocha --exit --no-timeouts --recursive --reporter mochawesome --reporter-options reportDir=test-results dist/*.test.js",
+    "test": "pnpm run build && tsc -p tsconfig.test.json && mocha --exit --no-timeouts --recursive --reporter mochawesome --reporter-options reportDir=test-results dist/test/*.test.js",
     "test:debug": "find ./test/ts -type f -name '*.js' -delete && pnpm run build && pnpm run build:tests && mocha --exit --no-timeouts --inspect-brk --recursive test/**/*.test.js",
     "test:watch": "nodemon -e ts --ignore dist/ --ignore 'test/ts/*.js' --exec pnpm run test",
     "semantic-release": "semantic-release",

@@ -14,5 +14,6 @@
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "NodeNext"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["test", "node_modules", "dist"]
 }

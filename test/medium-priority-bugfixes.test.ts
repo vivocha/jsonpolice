@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { create } from './index.js';
+import { create } from '../src/index.js';
 
 describe('Medium Priority Bug Fixes', () => {
   describe('Bug Fix 1: Version Detection Precision', () => {

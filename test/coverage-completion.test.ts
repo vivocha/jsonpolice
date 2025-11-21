@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { create } from './index.js';
-import { SchemaError } from './errors.js';
+import { create } from '../src/index.js';
+import { SchemaError } from '../src/errors.js';
 
 describe('Coverage Completion Tests', () => {
   describe('Schema Constructor Error Cases', () => {
