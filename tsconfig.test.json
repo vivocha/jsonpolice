@@ -5,7 +5,7 @@
     "target": "ES2022",
     "noImplicitAny": false,
     "sourceMap": true,
-    "declaration": true,
+    "declaration": false,
     "outDir": "test",
     "rootDir": "test",
     "strictNullChecks": true,
