@@ -7,6 +7,7 @@ import { testRegExp } from './utils.js';
 export abstract class Schema {
   protected _validators: Set<string>;
   protected _version: JsonSchemaVersion = 'draft-07';
+  protected _versionDetected: boolean = false;
 
   abstract spec(): Promise<any>;
 
@@ -101,10 +102,16 @@ export abstract class Schema {
 
   async validate(data: any, opts: ValidationOptions = {}, path = ''): Promise<any> {
     const spec = await this.spec();
-    // Auto-detect version from schema if not already set
-    if (this._version === 'draft-07' && spec) {
-      this._version = this.detectVersion(spec);
-      this._validators = this.getValidators(this._version);
+    // Auto-detect version from schema if not already detected
+    // Use a flag to prevent race conditions with concurrent validate() calls
+    if (!this._versionDetected && spec) {
+      this._versionDetected = true;
+      const detectedVersion = this.detectVersion(spec);
+      // Only update if version wasn't explicitly set via options
+      if (this._version === 'draft-07' && detectedVersion !== 'draft-07') {
+        this._version = detectedVersion;
+        this._validators = this.getValidators(this._version);
+      }
     }
     return this.validateSpec(Schema.scope(spec), data, spec, path, opts);
   }
@@ -168,7 +175,8 @@ export abstract class Schema {
           found = typeof data === 'number' && !isNaN(data);
           break;
         case 'integer':
-          found = typeof data === 'number' && !isNaN(data) && parseInt('' + data) === data;
+          // Use Number.isInteger() which correctly handles large integers and floating point precision
+          found = Number.isInteger(data);
           break;
         case 'string':
           found = typeof data === 'string' || data instanceof Date;
@@ -202,8 +210,14 @@ export abstract class Schema {
     if (typeof data === 'number') {
       if (typeof spec.multipleOf !== 'number') {
         throw Schema.error(spec, 'multipleOf');
-      } else if (data % spec.multipleOf !== 0) {
-        throw new ValidationError(path, Schema.scope(spec), 'multipleOf');
+      } else {
+        // Handle floating point precision issues by using epsilon comparison
+        const division = data / spec.multipleOf;
+        const remainder = Math.abs(division - Math.round(division));
+        const epsilon = 1e-10;
+        if (remainder > epsilon && remainder < (1 - epsilon)) {
+          throw new ValidationError(path, Schema.scope(spec), 'multipleOf');
+        }
       }
     }
     return data;
@@ -829,8 +843,9 @@ export class StaticSchema extends Schema {
     // Set version from options if provided
     if (opts.version) {
       this._version = opts.version;
+      this._versionDetected = true; // Mark as detected to prevent auto-detection
     }
-    
+
     const t = typeof dataOrUri;
     if (t === 'boolean') {
       this._spec = Promise.resolve(dataOrUri);
