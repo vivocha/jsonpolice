@@ -336,7 +336,10 @@ describe('Schema', function () {
           },
           { scope: 'http://example.com' }
         );
-        await schema.validate(new Date('2021-01-01')).should.eventually.equal('2021-01-01T00:00:00.000Z');
+        // Pattern validator now preserves Date objects instead of converting to string
+        const result = await schema.validate(new Date('2021-01-01'));
+        result.should.be.a('Date');
+        result.toISOString().should.equal('2021-01-01T00:00:00.000Z');
         return schema.validate(new Date('2020-01-01')).should.be.rejectedWith(jp.ValidationError, 'pattern');
       });
     });

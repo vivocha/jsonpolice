@@ -26,10 +26,10 @@ const defaultREs: {
   'uri-template': /^([^\x00-\x20\x7f"'<>\\^`{|}]|%[0-9A-Fa-f]{2}|\\.|[\x80-\uFFFF])*$/,
   'json-pointer': /^(\/([^/~]|~[01])*)*$/,
   'relative-json-pointer': /^(0|[1-9][0-9]*)(#|(\/([^/~]|~[01])*)*)$/,
-  'regex': /.*/,
+  // Note: 'regex' format is handled specially in formatValidator to validate syntax
   'uuid': /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   semver:
-    /^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$/,
+    /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$/,
 };
 const cachedREs: {
   [name: string]: RegExp;

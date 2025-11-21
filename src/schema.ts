@@ -13,10 +13,17 @@ export abstract class Schema {
 
   protected detectVersion(spec: any): JsonSchemaVersion {
     if (spec && spec.$schema) {
-      const schema = spec.$schema;
-      if (schema.includes('2020-12')) return '2020-12';
-      if (schema.includes('2019-09')) return '2019-09';
-      if (schema.includes('draft-07')) return 'draft-07';
+      const schema = spec.$schema.toLowerCase();
+      // Match official JSON Schema URIs more precisely
+      if (schema.includes('json-schema.org/draft/2020-12') || schema.endsWith('/2020-12/schema') || schema.endsWith('/2020-12/schema#')) {
+        return '2020-12';
+      }
+      if (schema.includes('json-schema.org/draft/2019-09') || schema.endsWith('/2019-09/schema') || schema.endsWith('/2019-09/schema#')) {
+        return '2019-09';
+      }
+      if (schema.includes('json-schema.org/draft-07') || schema.includes('json-schema.org/draft/07') || schema.endsWith('/draft-07/schema') || schema.endsWith('/draft-07/schema#')) {
+        return 'draft-07';
+      }
     }
     return 'draft-07';
   }
@@ -283,15 +290,19 @@ export abstract class Schema {
     return data;
   }
   protected patternValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
-    if (data instanceof Date) data = data.toISOString();
-    if (typeof data === 'string') {
+    // Use a temporary variable to avoid mutating Date objects
+    let testValue = data;
+    if (data instanceof Date) {
+      testValue = data.toISOString();
+    }
+    if (typeof testValue === 'string') {
       if (typeof spec.pattern !== 'string') {
         throw Schema.error(spec, 'pattern');
-      } else if (!testRegExp(spec.pattern, data)) {
+      } else if (!testRegExp(spec.pattern, testValue)) {
         throw new ValidationError(path, Schema.scope(spec), 'pattern');
       }
     }
-    return data;
+    return data;  // Return original data unchanged
   }
   protected formatValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (data instanceof Date) {
@@ -310,7 +321,27 @@ export abstract class Schema {
           if (!testRegExp(spec.format, data)) {
             throw Schema.error(spec, 'format');
           } else {
-            return new Date(data);
+            // Validate that the parsed date matches the input to catch invalid dates like 2024-02-31
+            const parsedDate = new Date(data);
+            if (isNaN(parsedDate.getTime())) {
+              throw Schema.error(spec, 'format');
+            }
+            // For date format, verify the date portion matches
+            if (spec.format === 'date') {
+              const isoString = parsedDate.toISOString().substring(0, 10);
+              if (isoString !== data) {
+                throw Schema.error(spec, 'format');
+              }
+            }
+            return parsedDate;
+          }
+        case 'regex':
+          // Validate that the string is a valid regex pattern by attempting to construct it
+          try {
+            new RegExp(data);
+            return data;
+          } catch (e) {
+            throw Schema.error(spec, 'format');
           }
         case 'time':
         case 'email':
@@ -326,8 +357,8 @@ export abstract class Schema {
         case 'uri-template':
         case 'json-pointer':
         case 'relative-json-pointer':
-        case 'regex':
         case 'uuid':
+        case 'semver':
           if (!testRegExp(spec.format, data)) {
             throw Schema.error(spec, 'format');
           } else {
