@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { create } from '../src/index.js';
+import { create } from '../dist/index.js';
 
 describe('JSON Schema 2020-12 Support', () => {
   describe('Version Detection', () => {

@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { create } from '../src/index.js';
+import { create } from '../dist/index.js';
 
 describe('Critical Bug Fixes', () => {
   describe('Bug Fix 1: Floating Point Precision in multipleOf', () => {

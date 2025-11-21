@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { create } from '../src/index.js';
+import { create } from '../dist/index.js';
 
 describe('Missing JSON Schema Features', () => {
   describe('Additional Format Validators', () => {

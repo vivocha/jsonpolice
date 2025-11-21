@@ -4,31 +4,33 @@
   "description": "JSON Schema parser and validator",
   "type": "module",
   "exports": {
-    ".": "./dist/src/index.js",
-    "./dist/src/*.js": "./dist/src/*.js"
+    ".": "./dist/index.js",
+    "./dist/*.js": "./dist/*.js"
   },
-  "types": "./dist/src/index.d.ts",
+  "types": "./dist/index.d.ts",
   "directories": {
     "test": "test"
   },
   "files": [
-    "dist/src/**/*.js",
-    "dist/src/**/*.js.map",
-    "dist/src/**/*.d.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
+    "build:test": "tsc -p tsconfig.test.json",
     "build:all": "pnpm install && pnpm run build && pnpm install --package-lock",
     "clean": "rimraf dist coverage .nyc_output test-results",
     "clean:all": "pnpm run clean && rimraf node_modules",
+    "clean:test": "find test -name '*.js' -o -name '*.js.map' -o -name '*.d.ts' | xargs rm -f",
     "cover": "c8 --require esm --reporter=lcov --reporter=text pnpm t",
     "report-coverage": "cat ./coverage/lcov.info | coveralls",
-    "prebuild": "rimraf dist",
+    "prebuild": "rm -f tsconfig.tsbuildinfo && rimraf dist",
     "check-coverage": "c8 check-coverage --statements 100 --branches 100 --functions 100 --lines 100",
     "watch:test": "pnpm t -- -w",
-    "test": "pnpm run build && tsc -p tsconfig.test.json && mocha --exit --no-timeouts --recursive --reporter mochawesome --reporter-options reportDir=test-results dist/test/*.test.js",
+    "test": "pnpm run build && pnpm run build:test && mocha --exit --no-timeouts --recursive --reporter mochawesome --reporter-options reportDir=test-results test/*.test.js",
     "test:debug": "find ./test/ts -type f -name '*.js' -delete && pnpm run build && pnpm run build:tests && mocha --exit --no-timeouts --inspect-brk --recursive test/**/*.test.js",
     "test:watch": "nodemon -e ts --ignore dist/ --ignore 'test/ts/*.js' --exec pnpm run test",
     "semantic-release": "semantic-release",

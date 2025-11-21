@@ -1,6 +1,6 @@
 import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import * as jp from '../src/index.js';
+import * as jp from '../dist/index.js';
 
 chai.should();
 chai.use(chaiAsPromised);

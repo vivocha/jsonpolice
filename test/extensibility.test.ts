@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { Schema, StaticSchema } from '../src/schema.js';
-import { ValidationError } from '../src/errors.js';
-import { JsonSchemaVersion } from '../src/types.js';
+import { Schema, StaticSchema } from '../dist/schema.js';
+import { ValidationError } from '../dist/errors.js';
+import { JsonSchemaVersion } from '../dist/types.js';
 
 class CustomValidatorSchema extends StaticSchema {
   protected addCustomValidators(validators: Set<string>, version: JsonSchemaVersion): void {
