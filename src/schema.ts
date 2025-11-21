@@ -28,6 +28,19 @@ export abstract class Schema {
     return 'draft-07';
   }
 
+  /**
+   * Helper function to clone data for validation without mutation.
+   * Uses deep cloning for objects/arrays, returns primitives as-is.
+   */
+  protected cloneForValidation(data: any): any {
+    // Primitives don't need cloning
+    if (data === null || data === undefined || typeof data !== 'object') {
+      return data;
+    }
+    // Use lodash cloneDeep for deep cloning objects and arrays
+    return _.cloneDeep(data);
+  }
+
   protected getValidators(version: JsonSchemaVersion = this._version): Set<string> {
     const baseValidators = new Set([
       'type',
@@ -445,23 +458,26 @@ export abstract class Schema {
   protected containsValidator(data: any, spec: any, path: string, opts: ValidationOptions): any {
     if (Array.isArray(data)) {
       let found = false;
-      const validatedIndices: number[] = [];
-      // First pass: check which elements validate
+      const validatedResults: Map<number, any> = new Map();
+
+      // Single pass: validate and store results for matching elements
       for (let i = 0; i < data.length; i++) {
         try {
-          this.validateSpec(Schema.scope(spec), data[i], spec.contains, `${path}/${i}`, opts);
-          validatedIndices.push(i);
+          const validated = this.validateSpec(Schema.scope(spec), data[i], spec.contains, `${path}/${i}`, opts);
+          validatedResults.set(i, validated);
           found = true;
         } catch (err) {
           // Element doesn't match, continue
         }
       }
+
       if (!found) {
         throw new ValidationError(path, Schema.scope(spec), 'contains');
       }
-      // Second pass: only mutate validated elements
-      for (let i of validatedIndices) {
-        data[i] = this.validateSpec(Schema.scope(spec), data[i], spec.contains, `${path}/${i}`, opts);
+
+      // Apply validated results
+      for (const [index, value] of validatedResults) {
+        data[index] = value;
       }
     }
     return data;
@@ -795,8 +811,8 @@ export abstract class Schema {
     // Try each schema without mutating original data until one succeeds
     for (let i of spec.anyOf) {
       try {
-        // Clone data to avoid partial mutations on failures
-        const testData = Array.isArray(data) ? [...data] : (typeof data === 'object' && data !== null) ? { ...data } : data;
+        // Use helper for efficient cloning
+        const testData = this.cloneForValidation(data);
         validData = this.validateSpec(Schema.scope(spec), testData, i, path, opts);
         found = true;
         break; // Use first matching schema
@@ -818,8 +834,8 @@ export abstract class Schema {
     // Try each schema without mutating original data
     for (let i of spec.oneOf) {
       try {
-        // Clone data to avoid partial mutations on failures
-        const testData = Array.isArray(data) ? [...data] : (typeof data === 'object' && data !== null) ? { ...data } : data;
+        // Use helper for efficient cloning
+        const testData = this.cloneForValidation(data);
         const newData = this.validateSpec(Schema.scope(spec), testData, i, path, opts);
         if (++found === 1) {
           validData = newData;
