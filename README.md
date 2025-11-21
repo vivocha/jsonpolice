@@ -80,20 +80,15 @@ const schema = await create({
   properties: {
     name: { type: 'string' },
     role: { type: 'string', default: 'user' },
-    preferences: {
-      type: 'object',
-      properties: {
-        theme: { type: 'string', default: 'light' },
-        notifications: { type: 'boolean', default: true }
-      }
-    }
+    active: { type: 'boolean', default: true },
+    credits: { type: 'number', default: 100 }
   }
 });
 
 const data = { name: 'Alice' };
 const result = await schema.validate(data, { setDefault: true });
 console.log(result);
-// Output: { name: 'Alice', role: 'user', preferences: { theme: 'light', notifications: true } }
+// Output: { name: 'Alice', role: 'user', active: true, credits: 100 }
 ```
 
 ## Exports
@@ -455,44 +450,58 @@ const orderSchema = await create(orderSchemaDefinition, { registry });
 
 ## Extensibility
 
-jsonpolice supports custom validators through class extension. You can extend the `Schema` class to add custom validation keywords:
+jsonpolice supports custom validators through class extension. You can extend the `StaticSchema` class to add custom validation keywords:
 
 ```javascript
-import { Schema } from 'jsonpolice';
+import { StaticSchema, ValidationError, Schema } from 'jsonpolice';
 
-class CustomSchema extends Schema {
-  // Override to add custom validators
-  addCustomValidators(validators) {
-    // Add a custom 'divisibleBy' validator
-    validators.add('divisibleBy', (data, spec, path, opts) => {
-      if (typeof data !== 'number') {
-        return data;
-      }
-      if (data % spec.divisibleBy !== 0) {
-        throw new ValidationError(
-          path,
-          this.scope(spec),
-          'divisibleBy',
-          `must be divisible by ${spec.divisibleBy}`
-        );
-      }
-      return data;
-    });
-
+class CustomSchema extends StaticSchema {
+  // Override to register custom validator keywords
+  addCustomValidators(validators, version) {
+    validators.add('divisibleBy');
     return validators;
+  }
+
+  // Implement the custom validator method
+  divisibleByValidator(data, spec, path, opts) {
+    if (typeof data !== 'number') {
+      return data;
+    }
+    if (data % spec.divisibleBy !== 0) {
+      throw new ValidationError(
+        path,
+        Schema.scope(spec),
+        'divisibleBy',
+        `must be divisible by ${spec.divisibleBy}`
+      );
+    }
+    return data;
+  }
+
+  // Override create to return the custom schema type
+  static async create(dataOrUri, opts = {}) {
+    const schema = new CustomSchema(dataOrUri, opts);
+    await schema.spec();
+    return schema;
   }
 }
 
 // Use the custom schema
-const schema = new CustomSchema({
+const schema = await CustomSchema.create({
   type: 'number',
   divisibleBy: 3
 });
 
-await schema.init();
 await schema.validate(9);  // ✓ Valid
 // await schema.validate(10); // ✗ Throws ValidationError
 ```
+
+**Key points for custom validators:**
+- Extend `StaticSchema` (not `Schema`)
+- Override `addCustomValidators(validators, version)` to register keyword names
+- Implement validator methods with naming pattern: `{keyword}Validator(data, spec, path, opts)`
+- Override `static create()` to properly initialize your custom schema
+- Use `await schema.spec()` in the create method to initialize the schema
 
 This pattern allows you to:
 - Add domain-specific validation rules
