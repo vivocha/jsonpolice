@@ -1,6 +1,6 @@
 {
   "name": "jsonpolice",
-  "version": "12.0.1",
+  "version": "13.0.0",
   "description": "JSON Schema parser and validator",
   "type": "module",
   "exports": {
@@ -89,7 +89,9 @@
       ".ts"
     ],
     "exclude": [
-      "**/test"
+      "**/test",
+      "**/*.test.ts",
+      "**/*.test.js"
     ],
     "reporter": [
       "lcov",
