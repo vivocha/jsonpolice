@@ -121,6 +121,40 @@ describe('Coverage Completion Tests', () => {
       expect(errorThrown).to.be.true;
     });
 
+    it('should handle date-time with extreme year values', async () => {
+      const schema = await create({
+        type: 'string',
+        format: 'date-time'
+      });
+
+      let errorThrown = false;
+      try {
+        // This passes the regex but produces NaN when parsed
+        await schema.validate('999999999999-12-31T23:59:59Z');
+      } catch (error: any) {
+        errorThrown = true;
+        expect(error.message).to.contain('format');
+      }
+      expect(errorThrown).to.be.true;
+    });
+
+    it('should handle date with extreme year values', async () => {
+      const schema = await create({
+        type: 'string',
+        format: 'date'
+      });
+
+      let errorThrown = false;
+      try {
+        // This passes the regex but produces NaN when parsed
+        await schema.validate('999999999999-12-31');
+      } catch (error: any) {
+        errorThrown = true;
+        expect(error.message).to.contain('format');
+      }
+      expect(errorThrown).to.be.true;
+    });
+
     it('should handle json-pointer format validation failure correctly', async () => {
       const schema = await create({
         type: 'string',
